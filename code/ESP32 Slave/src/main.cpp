@@ -15,13 +15,13 @@ HardwareSerial commSerial(1);
 Motor mimotor(pinPWM, pinDir1, pinDir2, pinEn, 0.25, 1);
 CServo miservo(pinServo);
 Encoder miencoder(pinEncoder_DT);
+HUSKYLENS Husky;
 
 #if ROUND_NUMBER == 2
 
 #define TAMANO_MINIMO_ESQUIVE 20
 #define ALTURA_MINIMA_ESQUIVE 40
 
-HUSKYLENS Husky;
 #endif
 
 volatile int speed;
@@ -46,6 +46,9 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   Serial.println("Empezando");
+
+  Wire.begin(18,19);
+  while(!Husky.begin(Wire)) delay(100);
   
   setPinModes();
 
@@ -60,7 +63,7 @@ void setup() {
   timerHandler = timerBegin(0, 80, true);
   timerAttachInterrupt(timerHandler, &onTimer, false);
   timerAlarmWrite(timerHandler, 32000, true);
-
+  
   #if ROUND_NUMBER == 2
   
   #endif

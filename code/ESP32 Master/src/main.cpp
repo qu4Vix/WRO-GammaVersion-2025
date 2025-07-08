@@ -146,11 +146,11 @@ void checkTurn();   // check wether you have to turn or not
 
 void setup() {
   // put your setup code here, to run once:
-
+  
   // begin serial
   Serial.begin(115200);
   // begin telemetry serial
-  teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+  //teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
@@ -164,7 +164,8 @@ void setup() {
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
   mimpu.WorkOffset();
-
+  analogWrite(pinLED_rojo, HIGH);
+  delay(1000);
   // begin the lidar
   lidar.begin(lidarSerial);
   rplidar_response_device_info_t info;
@@ -185,20 +186,22 @@ void setup() {
     &Task1,
     0);
   delay(500);
+  analogWrite(pinLED_rojo, LOW);
 
   // start lidar's motor rotating at max allowed speed
   analogWrite(pinLIDAR_motor, 255);
   delay(500);
 
   // wait until y coordinate is calculated
+  digitalWrite(pinLED_verde, HIGH);
   while (readDistance(0) == 0)
   {
-    digitalWrite(pinLED_verde, HIGH);
+    delay(100);
   }
   digitalWrite(pinLED_verde, LOW);
   digitalWrite(pinLED_rojo, HIGH);
   setYcoord(readDistance(0));
-  digitalWrite(pinLED_rojo, HIGH);
+  digitalWrite(pinLED_rojo, LOW);
 
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
@@ -315,17 +318,11 @@ void loop() {
     enviarDato((byte*)&bateria,sizeof(bateria));
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
-    enviarDato((byte*)&firma1Detectada,sizeof(firma1Detectada));
-    enviarDato((byte*)&firma1X,sizeof(firma1X));
-    enviarDato((byte*)&firma1Y,sizeof(firma1Y));
-    enviarDato((byte*)&firma2Detectada,sizeof(firma2Detectada));
-    enviarDato((byte*)&firma2X,sizeof(firma2X));
-    enviarDato((byte*)&firma2Y,sizeof(firma2Y));
-    enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
     enviarDato((byte*)&tramo,sizeof(tramo));
 
     prev_ms_tele = millis();
   }
+
 
   // check turn every 50ms
   static uint32_t prev_ms_turn = millis();
@@ -563,7 +560,6 @@ void turn() {
   }
   giros++;
   fixXposition = !fixXposition;
-  firma1Detectada = fixXposition;
 }
 
 void setXcoord(uint16_t i) {
