@@ -5,6 +5,8 @@
 #include <melody_player.h>
 #include "credentials.h"
 #include "pinAssignments.h"
+#include <rom/rtc.h>
+#include <esp_task_wdt.h>
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
@@ -146,13 +148,23 @@ void checkTurn();   // check wether you have to turn or not
 
 void setup() {
   // put your setup code here, to run once:
-  
+
   // begin serial
   Serial.begin(115200);
   // begin telemetry serial
-  //teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+  teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
+  delay(10000);
+  for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+    teleSerial.write(0xAA);
+  }
+  teleSerial.write(01);
+  for(int i=0; i<8; i++){
+      teleSerial.write(1);
+  }
+  teleSerial.write(rtc_get_reset_reason(0));
+  teleSerial.write(rtc_get_reset_reason(1));
 
   // set all the pin modes
   setPinModes();
@@ -176,6 +188,7 @@ void setup() {
   // detected...
   lidar.startScan();
 
+  
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
     LidarTaskCode,
@@ -201,6 +214,7 @@ void setup() {
   digitalWrite(pinLED_verde, LOW);
   digitalWrite(pinLED_rojo, HIGH);
   setYcoord(readDistance(0));
+  delay(500);
   digitalWrite(pinLED_rojo, LOW);
 
   digitalWrite(pinLED_verde, HIGH);
@@ -470,6 +484,7 @@ uint16_t readDistance(uint16_t angle) {
 
 // Create code for the task which manages the lidar
 void LidarTaskCode(void * pvParameters) {
+  esp_task_wdt_init(30, false);
   for (;;) {
     vTaskDelay(1);
     if (IS_OK(lidar.waitPoint())) {
