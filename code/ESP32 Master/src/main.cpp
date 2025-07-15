@@ -109,6 +109,10 @@ String notes4[18] =
 };
 Melody melody4 = MelodyFactory.load("Cornfield chase 4", 625, notes4, 18);
 
+u_int16_t distancia90;
+u_int16_t distancia270;
+
+
 // Delcarations
 
 // calculate the error in the direction
@@ -188,7 +192,7 @@ void setup() {
   // detected...
   lidar.startScan();
 
-  
+  esp_task_wdt_deinit();
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
     LidarTaskCode,
@@ -333,7 +337,10 @@ void loop() {
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
     enviarDato((byte*)&tramo,sizeof(tramo));
-
+    enviarDato((byte*)&distancia90,sizeof(distancia90));
+    enviarDato((byte*)&distancia270,sizeof(distancia270));
+    for (byte i=0; i<10; i++) teleSerial.write(byte(00));
+    
     prev_ms_tele = millis();
   }
 
@@ -362,11 +369,13 @@ void loop() {
   switch (estado)
   {
   case e::Inicio:
-    if (yPosition >= 2500) {
+    if (yPosition >= 1500) {
       decideTurn();
+    } else if (yPosition >= 2500) {
       if (turnSense != 0) {
         setXcoord(readDistance(270));
         objectivePosition = xPosition;
+        vTaskDelete(Task1);
         analogWrite(pinLIDAR_motor, 0);
         estado = e::Recto;
         setSpeed(5);
@@ -453,18 +462,18 @@ uint16_t getIndex(float angle) {
 
 // Angle from 0 to 359
 uint16_t readDistance(uint16_t angle) {
-  int index = -5;
+  int index = -3;
   int validIndex = index;
-  int validMeasures[10];
+  int validMeasures[6];
 
-  while (index < 5) {
+  while (index < 3) {
     // work out the resultant index for the distances array
     int resAngle = angle + index;
     if (resAngle < 0) resAngle += 360;
 
     // check whether the measurement is non zero and new and store it into the next place of the array
     if (distances[resAngle] == 0) {}
-    else if ((millis() - distancesMillis[resAngle]) < 500)
+    else if ((millis() - distancesMillis[resAngle]) < 100)
     {
       validMeasures[validIndex] = resAngle;
       validIndex++;
@@ -484,7 +493,7 @@ uint16_t readDistance(uint16_t angle) {
 
 // Create code for the task which manages the lidar
 void LidarTaskCode(void * pvParameters) {
-  esp_task_wdt_init(30, false);
+  
   for (;;) {
     vTaskDelay(1);
     if (IS_OK(lidar.waitPoint())) {
@@ -622,12 +631,14 @@ void checkTurn() {
   }
 }
 
-void decideTurn(){
-  if (readDistance(90) > readDistance(270) && readDistance(90) > 1000)
+void decideTurn() {
+  distancia90 = readDistance(90);
+  distancia270 = readDistance(270);
+  if (distancia90 > distancia270 && distancia90 > 1000)
   {
     turnSense = -1;
   }
-  else if (readDistance(270) > readDistance(90) && readDistance(270) > 1000)
+  else if (distancia270 > distancia90 && distancia270 > 1000)
   {
     turnSense = 1;
   }
