@@ -8,6 +8,9 @@
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
 
+// Practice mode (Button desabled) for easy launches while testing
+#define PRACTICE_MODE true
+
 // Enables wifi functions when true
 #define ENABLE_WIFI false
 
@@ -33,7 +36,8 @@ enum e {
   DecidiendoGiro,
   PreGiro,
   Girando,
-  Final
+  Final,
+  Prueba
 };
 uint8_t estado = e::Inicio;
 
@@ -140,6 +144,7 @@ void LidarTaskCode(void * pvParameters);
 
 // send a piece of data to the telemetry esp32
 void enviarDato(byte* pointer, int8_t size);
+void sendPacket(byte packetType, byte* packet);
 
 // functions for the management of the car's position
 
@@ -159,20 +164,10 @@ void setup() {
   teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
-  delay(10000);
-  for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
-    teleSerial.write(0xAA);
-  }
-  teleSerial.write(01);
-  for(int i=0; i<8; i++){
-      teleSerial.write(1);
-  }
-  teleSerial.write(rtc_get_reset_reason(0));
-  teleSerial.write(rtc_get_reset_reason(1));
 
   // set all the pin modes
   setPinModes();
-
+  digitalWrite(pinBuzzer, HIGH);
   #if ENABLE_WIFI == true
     
   #endif
@@ -204,6 +199,7 @@ void setup() {
     0);
   delay(500);
   analogWrite(pinLED_rojo, LOW);
+  digitalWrite(pinBuzzer, LOW);
 
   // start lidar's motor rotating at max allowed speed
   analogWrite(pinLIDAR_motor, 255);
@@ -221,6 +217,7 @@ void setup() {
   delay(500);
   digitalWrite(pinLED_rojo, LOW);
 
+  #if PRACTICE_MODE == false
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
@@ -229,6 +226,7 @@ void setup() {
     }
   }
   digitalWrite(pinLED_verde, LOW);
+  #endif
   delay(1000);
 
   // start driving (set a speed to the car and initialize the mpu)
@@ -265,7 +263,7 @@ void loop() {
 
   // send telemetry every 100ms
   static uint32_t prev_ms_tele = millis();
-  if (millis() > prev_ms_tele+100)
+  if (millis() > prev_ms_tele+500)
   {
 
     /*FORMATO TELEMETRIA
@@ -321,12 +319,12 @@ void loop() {
       teleSerial.write(0xAA);
     }
     teleSerial.write(05);
-    long posXLong = xPosition;
-    long posYLong = yPosition;
-    long posXObjLong = objectivePosition;
+    long posXLong = long(xPosition);
+    long posYLong = long(yPosition);
+    long posXObjLong = long(objectivePosition);
     long posYObjLong = (turnSense==-1)?1:(turnSense==1)?2:0;
-    long anguloLong = mimpu.GetAngle();
-    long anguloObjLong = objectiveDirection;
+    long anguloLong = long(mimpu.GetAngle());
+    long anguloObjLong = long(objectiveDirection);
     enviarDato((byte*)&posXLong,sizeof(posXLong));
     enviarDato((byte*)&posYLong,sizeof(posYLong));
     enviarDato((byte*)&posXObjLong,sizeof(posXObjLong));
@@ -370,15 +368,21 @@ void loop() {
   {
   case e::Inicio:
     if (yPosition >= 1500) {
+      digitalWrite(pinLED_rojo, HIGH);
       decideTurn();
-    } else if (yPosition >= 2500) {
-      if (turnSense != 0) {
-        setXcoord(readDistance(270));
-        objectivePosition = xPosition;
-        vTaskDelete(Task1);
-        analogWrite(pinLIDAR_motor, 0);
-        estado = e::Recto;
-        setSpeed(5);
+      if (yPosition >= 2200) {
+        setSpeed(0);
+        if (turnSense != 0) {
+          digitalWrite(pinLED_verde, HIGH);
+          digitalWrite(pinBuzzer, HIGH);
+          setXcoord(readDistance(270));
+          objectivePosition = xPosition;
+          vTaskDelete(Task1);
+          analogWrite(pinLIDAR_motor, 0);
+          estado = e::Recto;
+          setSpeed(5);
+          digitalWrite(pinBuzzer, LOW);
+        }
       }
     }
   break;
@@ -392,6 +396,9 @@ void loop() {
       setSpeed(0);
     }
   break;
+  //Caso prueba para probar el encoder y calcular MMperEncoder
+  case e::Prueba:
+    if (yPosition >= 3000) setSpeed(0);
   }
 }
 
@@ -416,9 +423,12 @@ void setSteering(int angle) {
   commSerial.write(_angle);
 }
 
+// Receive the data from commSerial - the Serial which connects to the ESP32 Slave
 void receiveData() {
+  //Receive the first byte (the header)
   uint8_t firstByte;
   commSerial.readBytes(&firstByte, 1);
+  // Header 7 gives the current encoder measurement
   if (firstByte == 7) {
     uint8_t bytes[4];
     commSerial.readBytes(bytes, 4);
@@ -426,11 +436,29 @@ void receiveData() {
     for (uint8_t iteration; iteration < 4; iteration++) {
       encoderMeasurement = encoderMeasurement | bytes[iteration] << (8*iteration);
     }
-  } else if (firstByte == 6) {
+  } else
+  // Header 6 gives the current state of the battery (the current voltage level: 1, 2 or 3)
+  if (firstByte == 6) {
     uint8_t tensionValue;
     commSerial.readBytes(&tensionValue, 1);
     bateria = tensionValue;
     manageTension(tensionValue);
+  } else
+  // Header 4 gives the reset reason of the ESP32 Slave and sends it alongside the Master's trought telemetry
+  if (firstByte == 4) {
+    uint8_t slaveResetReason[2];
+    commSerial.readBytes(slaveResetReason, 2);
+    for (int i = 0; i<4; i++) {   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(01);
+    for (int i=0; i<6; i++) {
+        teleSerial.write(1);
+    }
+    teleSerial.write(rtc_get_reset_reason(0));
+    teleSerial.write(rtc_get_reset_reason(1));
+    teleSerial.write(slaveResetReason[0]);
+    teleSerial.write(slaveResetReason[1]);
   }
 }
 
@@ -462,11 +490,11 @@ uint16_t getIndex(float angle) {
 
 // Angle from 0 to 359
 uint16_t readDistance(uint16_t angle) {
-  int index = -3;
+  int index = -5;
   int validIndex = index;
-  int validMeasures[6];
+  int validMeasures[10];
 
-  while (index < 3) {
+  while (index < 5) {
     // work out the resultant index for the distances array
     int resAngle = angle + index;
     if (resAngle < 0) resAngle += 360;
@@ -484,7 +512,7 @@ uint16_t readDistance(uint16_t angle) {
   // search for two consecutive measurements that are similar
   for (int arrayIndex = 1; arrayIndex < validIndex; arrayIndex++) {
     if (abs(distances[validMeasures[arrayIndex]] - distances[validMeasures[arrayIndex - 1]]) < 50) {
-      return distances[validMeasures[arrayIndex]];
+      return _min(distances[validMeasures[arrayIndex]],distances[validMeasures[arrayIndex - 1]]);
     }
   }
   // if the search fails return 0
@@ -645,11 +673,23 @@ void decideTurn() {
   else turnSense = 0;
 }
 
-void enviarDato(byte* pointer, int8_t size){
+void enviarDato(byte* pointer, int8_t size) {
   int8_t posicion = size - 1;   //recorreremos la memoria desde el de mas valor hara el de menos, ya que el 
                           //receptor espera ese orde MSB
   while(posicion >= 0 ){
     teleSerial.write(pointer[posicion]);
     posicion--;
+  }
+}
+
+void sendPacket(byte packetType, byte* packet) {
+  byte size;
+  if (sizeof(packet) == size);
+  for (int i = 0; i<4; i++) {     //Send the start of packet header
+    teleSerial.write(0xAA);
+  }
+  teleSerial.write(packetType);   //Send the packet type
+  for (int i=0; i<size; i++) {    //Send the packet data
+      teleSerial.write(packet[i]);
   }
 }

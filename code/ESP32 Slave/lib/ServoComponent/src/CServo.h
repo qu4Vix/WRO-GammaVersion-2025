@@ -9,8 +9,8 @@
 
 /*
 Our servo specifications:
-MAX: 130 (150)
-MIN: 50 (30)
+MAX: (130) (150) (175) (143)
+MIN: (50) (30) (55) (33)
 1000us -> 2000us
 */
 
@@ -33,8 +33,8 @@ private:
   ESP32PWM pwm;
   byte _pinServo;
   int _ang = 0;
-  byte _servoMIN = 30;
-  byte _servoMAX = 150;
+  byte _servoMIN = 36;
+  byte _servoMAX = 140;
 };
 
 #endif

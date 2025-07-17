@@ -5,6 +5,7 @@
 #include <HuskyLens.h> // Software serial was not found so commented on library file (max and min changed for _max and _min)
 #include "credentials.h"
 #include "pinAssignments.h"
+#include <rom/rtc.h>
 
 #define ENABLE_WIFI fasle
 #define ROUND_NUMBER 1
@@ -142,6 +143,12 @@ void sendCamera(uint8_t signature, uint16_t x, uint16_t y) {
   commSerial.write(_y);
 }
 #endif
+
+void sendResetReason() {
+  commSerial.write(4);
+  commSerial.write(rtc_get_reset_reason(0));
+  commSerial.write(rtc_get_reset_reason(1));
+}
 
 void receiveData() {
   uint8_t firstByte;
