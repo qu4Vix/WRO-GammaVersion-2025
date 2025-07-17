@@ -26,6 +26,7 @@ HUSKYLENS Husky;
 
 volatile int speed;
 int objectiveSpeed;
+HUSKYLENSResult result;
 
 void IRAM_ATTR onTimer();
 
@@ -103,10 +104,10 @@ void loop() {
   }
 
   #if ROUND_NUMBER == 2
-
   static uint32_t prev_ms_camera = millis();
   if (millis() > prev_ms_camera) {
-    
+    HUSKYLENSResult result = huskylens.read();
+    sendCamera(result.ID, result.width, result.height);
     prev_ms_camera = millis() + 100;
   }
   #endif
