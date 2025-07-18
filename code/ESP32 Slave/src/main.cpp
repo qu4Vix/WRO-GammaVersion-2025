@@ -34,6 +34,7 @@ void IRAM_ATTR onTimer();
 void receiveData();
 void sendEncoder(uint32_t encoder);
 void sendTension(uint8_t batteryLevel);
+void sendResetReason();
 void actualizarBateria();
 // Battery levels
 // 8.4V - 3600
@@ -61,6 +62,8 @@ void setup() {
   #endif
   
   delay(5000);
+
+  //sendResetReason();
 
   timerHandler = timerBegin(0, 80, true);
   timerAttachInterrupt(timerHandler, &onTimer, false);

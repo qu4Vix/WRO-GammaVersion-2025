@@ -175,7 +175,6 @@ void setup() {
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
   mimpu.WorkOffset();
-  analogWrite(pinLED_rojo, HIGH);
   delay(1000);
   // begin the lidar
   lidar.begin(lidarSerial);
@@ -198,7 +197,6 @@ void setup() {
     &Task1,
     0);
   delay(500);
-  analogWrite(pinLED_rojo, LOW);
   digitalWrite(pinBuzzer, LOW);
 
   // start lidar's motor rotating at max allowed speed
@@ -206,16 +204,12 @@ void setup() {
   delay(500);
 
   // wait until y coordinate is calculated
-  digitalWrite(pinLED_verde, HIGH);
   while (readDistance(0) == 0)
   {
     delay(100);
   }
-  digitalWrite(pinLED_verde, LOW);
-  digitalWrite(pinLED_rojo, HIGH);
   setYcoord(readDistance(0));
   delay(500);
-  digitalWrite(pinLED_rojo, LOW);
 
   #if PRACTICE_MODE == false
   digitalWrite(pinLED_verde, HIGH);
@@ -230,7 +224,7 @@ void setup() {
   delay(1000);
 
   // start driving (set a speed to the car and initialize the mpu)
-  setSpeed(2);
+  setSpeed(4);
   mimpu.measureFirstMillis();
 }
 
@@ -373,6 +367,7 @@ void loop() {
       if (yPosition >= 2200) {
         setSpeed(0);
         if (turnSense != 0) {
+          digitalWrite(pinLED_rojo, LOW);
           digitalWrite(pinLED_verde, HIGH);
           digitalWrite(pinBuzzer, HIGH);
           setXcoord(readDistance(270));
@@ -443,7 +438,7 @@ void receiveData() {
     commSerial.readBytes(&tensionValue, 1);
     bateria = tensionValue;
     manageTension(tensionValue);
-  } else
+  } /*else
   // Header 4 gives the reset reason of the ESP32 Slave and sends it alongside the Master's trought telemetry
   if (firstByte == 4) {
     uint8_t slaveResetReason[2];
@@ -459,7 +454,7 @@ void receiveData() {
     teleSerial.write(rtc_get_reset_reason(1));
     teleSerial.write(slaveResetReason[0]);
     teleSerial.write(slaveResetReason[1]);
-  }
+  }*/
 }
 
 void manageTension(uint8_t tension) {
@@ -488,20 +483,21 @@ uint16_t getIndex(float angle) {
   }
 }
 
+#define numberOfMeasures 5
 // Angle from 0 to 359
 uint16_t readDistance(uint16_t angle) {
-  int index = -5;
-  int validIndex = index;
-  int validMeasures[10];
+  int index = -numberOfMeasures;
+  int validIndex = 0;
+  int validMeasures[2*numberOfMeasures];
 
-  while (index < 5) {
+  while (index < numberOfMeasures) {
     // work out the resultant index for the distances array
     int resAngle = angle + index;
     if (resAngle < 0) resAngle += 360;
 
     // check whether the measurement is non zero and new and store it into the next place of the array
     if (distances[resAngle] == 0) {}
-    else if ((millis() - distancesMillis[resAngle]) < 100)
+    else if ((millis() - distancesMillis[resAngle]) < 500)
     {
       validMeasures[validIndex] = resAngle;
       validIndex++;
@@ -512,7 +508,7 @@ uint16_t readDistance(uint16_t angle) {
   // search for two consecutive measurements that are similar
   for (int arrayIndex = 1; arrayIndex < validIndex; arrayIndex++) {
     if (abs(distances[validMeasures[arrayIndex]] - distances[validMeasures[arrayIndex - 1]]) < 50) {
-      return _min(distances[validMeasures[arrayIndex]],distances[validMeasures[arrayIndex - 1]]);
+      return _min(distances[validMeasures[arrayIndex]], distances[validMeasures[arrayIndex - 1]]);
     }
   }
   // if the search fails return 0
@@ -693,3 +689,11 @@ void sendPacket(byte packetType, byte* packet) {
       teleSerial.write(packet[i]);
   }
 }
+/*
+struct dataPacket
+{
+  byte packetType;
+  byte size;
+};
+
+*/
