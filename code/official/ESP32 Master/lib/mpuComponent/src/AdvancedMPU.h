@@ -23,13 +23,19 @@ class MPU {
     void UpdateAngle(); // Update the angle (Call in the loop)
     float GetAngle();   // Returns the angle
     void measureFirstMillis();
+    void UpdateInertial();
+    float GetSpeed();
+    float GetDisplacement();
+    void CalibrateInertial();
 
     private:
     MPU9250 _mpu;   // MPU object
     byte _pinSDA;
     byte _pinSCL;
-    float _offset;
-    float _angle;
+    float _offset = 0;
+    float _angle = 0;
+    float _speed = 0;
+    float _displacement = 0; // in metres (probably)
     uint32_t _prev_ms_angle;
     bool _firstMillisRead;
 };

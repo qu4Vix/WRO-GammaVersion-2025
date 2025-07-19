@@ -56,18 +56,52 @@ void MPU::WorkOffset() {
     Serial.println("Offset = " + String(_offset));
 }
 
+void MPU::CalibrateInertial() {
+    _mpu.verbose(true);
+    _mpu.calibrateAccelGyro();
+    _mpu.verbose(false);
+}
+
+// Measures gyro to update the angle
 void MPU::UpdateAngle() {
     if (_mpu.update()) {
         unsigned long sampleDuration = millis() - _prev_ms_angle;
         float gyroZ = _mpu.getGyroZ();
         _prev_ms_angle = millis();
+        // Dead-reckon the angle
         _angle += ((gyroZ - _offset) * sampleDuration / 1000);
         //Serial.println(_angle);
     }
 }
 
+// Measures gyro and acceleration to update angle, speed and displacement
+void MPU::UpdateInertial() {
+    if (_mpu.update()) {
+        unsigned long sampleDuration = millis() - _prev_ms_angle;
+        float gyroZ = _mpu.getGyroZ();
+        float accX = _mpu.getAccX();
+        float accY = _mpu.getAccY();
+        _prev_ms_angle = millis();
+        // Dead-reckon the angle
+        _angle += (gyroZ * sampleDuration / 1000);
+        // Calculate the magnitude of acceleration
+        float accT = sqrt(accX*accX + accY*accY);
+        // Dead-reckon speed and displacement
+        _speed += (accT * sampleDuration / 1000);
+        _displacement += (_speed * sampleDuration / 1000);
+    }
+}
+
 float MPU::GetAngle() {
     return _angle;
+}
+
+float MPU::GetSpeed() {
+    return _speed;
+}
+
+float MPU::GetDisplacement() {
+    return _displacement;
 }
 
 void MPU::measureFirstMillis() {

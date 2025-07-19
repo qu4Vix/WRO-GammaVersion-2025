@@ -63,6 +63,9 @@ static uint16_t distancesMillis[360];
 double xPosition = 0;
 // y position of the car (increases upwards)
 double yPosition = 0;
+// mpu displacement
+float displacement;
+float prev_displacement;
 
 // position PID controller variables
 
@@ -174,7 +177,7 @@ void setup() {
   // configure the mpu
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
-  mimpu.WorkOffset();
+  mimpu.CalibrateInertial();
   delay(1000);
   // begin the lidar
   lidar.begin(lidarSerial);
@@ -238,16 +241,17 @@ void loop() {
   }
 
   // update mpu's angle
-  mimpu.UpdateAngle();
+  mimpu.UpdateInertial();
 
   // repeat position functions every 32ms
   static uint32_t prev_ms_position = millis();
   if (millis() > prev_ms_position) {
-    if (encoderMeasurement != prev_encoderMeasurement) {
+    displacement = mimpu.GetDisplacement()*1000;
+    if (displacement != prev_displacement) {
       // calculate the increment in position and add it
-      double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-      double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-      prev_encoderMeasurement = encoderMeasurement;
+      double dy = (displacement - prev_displacement) * cos(mimpu.GetAngle() * (M_PI/180));
+      double dx = (displacement - prev_displacement) * sin(mimpu.GetAngle() * (M_PI/180));
+      prev_displacement = displacement;
       xPosition -= dx; // x -> + derecha - izquierda
       yPosition += dy;
       iteratePositionPID();
@@ -316,7 +320,7 @@ void loop() {
     long posXLong = long(xPosition);
     long posYLong = long(yPosition);
     long posXObjLong = long(objectivePosition);
-    long posYObjLong = (turnSense==-1)?1:(turnSense==1)?2:0;
+    long posYObjLong = long(displacement*1000);
     long anguloLong = long(mimpu.GetAngle());
     long anguloObjLong = long(objectiveDirection);
     enviarDato((byte*)&posXLong,sizeof(posXLong));
