@@ -149,9 +149,9 @@ def parse_packet(receivedBytes):
         print("Cabecera Desconocida")
         return None
 
-'''while True:
+while True:
     data, addr = sock.recvfrom(1000000)
     print("received")
     #decoded = decodeBytes(data)
     #print(decoded)
-    print(parse_packet(data))'''
+    print(parse_packet(data))

@@ -11,7 +11,7 @@ HardwareSerial SerialTelem(1);
 void connectToWiFi(const char * ssid, const char * pwd);
 void WiFiEvent(WiFiEvent_t event);
 
-const char * udpAddress = " 192.168.144.253";
+const char * udpAddress = " 192.168.144.4"; //COMPUTER IP
 const int udpPort = 5005;
 
 //Are we currently connected?
@@ -27,7 +27,7 @@ uint16_t posBuffer;
 uint8_t TeleBuffer[1000];
 uint16_t posTele;
 
-uint16_t DataLenth[6] = {5,10,15,360,720,45};   //Dependiendo del tipo de paquete, éste contendrá cierta cantidad de datos
+uint16_t DataLenth[6] = {5,10,15,360,720,35};   //Dependiendo del tipo de paquete, éste contendrá cierta cantidad de datos
                                                 //  -0 -> 5 datos     ->NA
                                                 //  -1 -> 10 datos    ->NA
                                                 //  -2 -> 15 datos    ->NA
