@@ -265,6 +265,8 @@ void loop() {
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
+
+   /***************************************************************** 
     for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
@@ -275,7 +277,8 @@ void loop() {
         teleSerial.write(distances[zi]>>8);
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
-    }
+    }*/
+   
     /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
