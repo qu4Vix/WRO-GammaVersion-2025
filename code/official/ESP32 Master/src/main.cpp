@@ -3,7 +3,7 @@
 #include <RPLidar.h>
 #include <melody_factory.h>
 #include <melody_player.h>
-#include "credentials.h"
+//#include "credentials.h"
 #include "pinAssignments.h"
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
@@ -367,7 +367,7 @@ void loop() {
     if (yPosition >= 1500) {
       digitalWrite(pinLED_rojo, HIGH);
       decideTurn();
-      if (yPosition >= 2200) {
+      if (yPosition >= 2400) {
         setSpeed(0);
         if (turnSense != 0) {
           digitalWrite(pinLED_rojo, LOW);
@@ -493,14 +493,24 @@ uint16_t readDistance(uint16_t angle) {
   int validIndex = 0;
   int validMeasures[2*numberOfMeasures];
 
+  int index2 = -numberOfMeasures;
+  uint16_t f_distances[360];
+  uint16_t f_distancesMillis[360];
+  
+  
+  for (int i = 0; i < 360; i++) {
+    f_distances[i] = distances[i];
+    f_distancesMillis[i] = distancesMillis[i];
+  }
+  
+
   while (index < numberOfMeasures) {
     // work out the resultant index for the distances array
     int resAngle = angle + index;
     if (resAngle < 0) resAngle += 360;
-
     // check whether the measurement is non zero and new and store it into the next place of the array
-    if (distances[resAngle] == 0) {}
-    else if ((millis() - distancesMillis[resAngle]) < 500)
+    if (f_distances[resAngle] == 0) {}
+    else if ((millis() - f_distancesMillis[resAngle]) < 800)
     {
       validMeasures[validIndex] = resAngle;
       validIndex++;
@@ -510,8 +520,8 @@ uint16_t readDistance(uint16_t angle) {
   }
   // search for two consecutive measurements that are similar
   for (int arrayIndex = 1; arrayIndex < validIndex; arrayIndex++) {
-    if (abs(distances[validMeasures[arrayIndex]] - distances[validMeasures[arrayIndex - 1]]) < 50) {
-      return _min(distances[validMeasures[arrayIndex]], distances[validMeasures[arrayIndex - 1]]);
+    if (abs(f_distances[validMeasures[arrayIndex]] - f_distances[validMeasures[arrayIndex - 1]]) < 50) {
+      return _min(f_distances[validMeasures[arrayIndex]], f_distances[validMeasures[arrayIndex - 1]]);
     }
   }
   // if the search fails return 0

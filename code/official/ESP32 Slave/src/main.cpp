@@ -8,7 +8,7 @@
 #include <rom/rtc.h>
 
 #define ENABLE_WIFI fasle
-#define ROUND_NUMBER 1
+#define ROUND_NUMBER 2  // Change this to 1 for round Open Challenge and 2 for round Obstacle Challenge
 
 hw_timer_t* timerHandler;
 
@@ -110,7 +110,7 @@ void loop() {
   #if ROUND_NUMBER == 2
   static uint32_t prev_ms_camera = millis();
   if (millis() > prev_ms_camera) {
-    HUSKYLENSResult result = huskylens.read();
+    HUSKYLENSResult result = Husky.read();
     sendCamera(result.ID, result.width, result.height);
     prev_ms_camera = millis() + 100;
   }

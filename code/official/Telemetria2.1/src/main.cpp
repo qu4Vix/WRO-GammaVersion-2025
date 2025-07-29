@@ -7,15 +7,15 @@
 #define inputBufferSize 1000
 #define timeout 100
 
-const char* ssid = "DiverBOT_Invitados";
-const char* password = "bucleinfinito";
+const char* ssid = "DiverBOT WRO Denia";
+const char* password = "repetirporsiempre";
 
 HardwareSerial SerialTelem(1);
 void connectToWiFi(const char * ssid, const char * pwd);
 void WiFiEvent(WiFiEvent_t event);
 
-const char * udpAddress = "192.168.144.235";
-const int udpPort = 5006;
+const char * udpAddress = "192.168.0.101";
+const int udpPort = 5007;
 
 //Are we currently connected?
 boolean connected = false;

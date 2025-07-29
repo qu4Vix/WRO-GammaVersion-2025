@@ -1,14 +1,15 @@
 #include <Arduino.h>
 #include <AdvancedMPU.h>
 #include <RPLidar.h>
-//#include "credentials.h"
+#include "credentials.h"
 #include "pinAssignments.h"
+
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
 #define ENABLE_TELEMETRY true
 
-#if ENABLE_WIFI == true
+/*#if ENABLE_WIFI == true
 #include <OTAUpdate.h>
 #include <Telemetry.h>
 
@@ -20,7 +21,7 @@ uint16_t otaPort = 80;
 Updater miota(otaPort);
 TelemetryManager telemetry(receiversIP, receiversPort);
 #endif
-
+*/
 // Speeds
 #define StartSpeed 2
 #define CruisiereSpeed 10
@@ -40,8 +41,8 @@ uint8_t bateria;
 
 // camera signatures
 
-#define GreenSignature 1
-#define RedSignature 2
+#define GreenSignature 2
+#define RedSignature 1
 
 bool firma1Detectada = false;
 uint8_t firma1X = 18;
@@ -204,7 +205,7 @@ void setup() {
   // set all the pin modes
   setPinModes();
   mimpu.SetDebugLedPin(pinLED_rojo);
-
+/*
   #if ENABLE_WIFI == true
     miota.WiFiInit();
     miota.SetStaticIP(250);
@@ -212,7 +213,7 @@ void setup() {
 
     telemetry.StartUDP(udpPort);
   #endif
-
+*/
   // configure the mpu
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
