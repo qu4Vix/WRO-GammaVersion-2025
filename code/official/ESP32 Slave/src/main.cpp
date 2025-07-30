@@ -1,3 +1,21 @@
+/***************************************************
+ * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
+ * 
+ * This code is under a GPL-3.0 license
+ * 
+****************************************************/
+
+/***************************************************
+ * 
+ * This is the code for the "Slave" ESP32 of our robot, which it is in charge of combining
+ * all the different data from several sensors (camera, encoder...) and send it to the
+ * main ESP32 board (the "Master") to be processed and translated into the correct moving
+ * of the robot.
+ * 
+****************************************************/
+
+// ***** INCLUDING THE LIBRARIES *****
 #include <Arduino.h>
 #include <Motor.h>
 #include <CServo.h>
@@ -7,7 +25,7 @@
 #include "pinAssignments.h"
 #include <rom/rtc.h>
 
-#define ENABLE_WIFI fasle
+#define ENABLE_WIFI false // WIFI IS NOT USED ON THIS BOARD
 #define ROUND_NUMBER 2  // Change this to 1 for round Open Challenge and 2 for round Obstacle Challenge
 
 hw_timer_t* timerHandler;
@@ -16,7 +34,9 @@ HardwareSerial commSerial(1);
 Motor mimotor(pinPWM, pinDir1, pinDir2, pinEn, 0.25, 1);
 CServo miservo(pinServo);
 Encoder miencoder(pinEncoder_DT);
+
 HUSKYLENS Husky;
+HUSKYLENSResult fHusky;
 
 #if ROUND_NUMBER == 2
 
@@ -27,7 +47,7 @@ HUSKYLENS Husky;
 
 volatile int speed;
 int objectiveSpeed;
-HUSKYLENSResult result;
+
 
 void IRAM_ATTR onTimer();
 
@@ -36,6 +56,7 @@ void sendEncoder(uint32_t encoder);
 void sendTension(uint8_t batteryLevel);
 void sendResetReason();
 void actualizarBateria();
+void calculateNearestBlockAndSendCamera ();
 // Battery levels
 // 8.4V - 3600
 // 8V - 3300
@@ -110,8 +131,7 @@ void loop() {
   #if ROUND_NUMBER == 2
   static uint32_t prev_ms_camera = millis();
   if (millis() > prev_ms_camera) {
-    HUSKYLENSResult result = Husky.read();
-    sendCamera(result.ID, result.width, result.height);
+    calculateNearestBlockAndSendCamera();
     prev_ms_camera = millis() + 100;
   }
   #endif
@@ -186,3 +206,35 @@ void actualizarBateria() {
     sendTension(3);
   }
 }
+
+#if ROUND_NUMBER == 2
+void calculateNearestBlockAndSendCamera (){
+  int16_t numberOfBlocks = Husky.countBlocksLearned();
+
+  int16_t blocksIndexNumber[numberOfBlocks];
+  uint16_t blocksHeight[numberOfBlocks];
+
+  int16_t maxHeightIndex;
+  uint16_t maxHeight = 0;
+
+  for (int i = 0; i < numberOfBlocks; i++)
+  {
+    blocksIndexNumber[i] = i;
+    
+    fHusky = Husky.getBlockLearned(i);
+    blocksHeight[i] = fHusky.height;
+  }
+
+  for (int i = 0; i < numberOfBlocks; i++)
+  {
+    if(blocksHeight[i] > maxHeight)
+    {
+      maxHeight = blocksHeight[i];
+      maxHeightIndex = blocksIndexNumber[i];
+    } 
+  }
+
+  fHusky = Husky.getBlockLearned(maxHeightIndex);
+  sendCamera(fHusky.ID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));
+}
+#endif
