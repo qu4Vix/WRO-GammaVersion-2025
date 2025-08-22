@@ -11,8 +11,8 @@ HardwareSerial SerialTelem(1);
 void connectToWiFi(const char * ssid, const char * pwd);
 void WiFiEvent(WiFiEvent_t event);
 
-const char * udpAddress = " 192.168.144.4"; //COMPUTER IP
-const int udpPort = 5005;
+const char * udpAddress = "192.168.1.17"; //COMPUTER IP
+const int udpPort = 5007;
 
 //Are we currently connected?
 boolean connected = false;
@@ -61,42 +61,43 @@ uint16_t DataLenth[6] = {5,10,15,360,720,35};   //Dependiendo del tipo de paquet
                                                 
 
 //Hagamos parpadear el led (un poco)
-void blinkLed(){
-  if((millis()/10) % 10 == 0 ){
+void blinkLed() {
+  if ((millis()/10) % 10 == 0 ) {
     digitalWrite(LED_BUILTIN,!digitalRead(LED_BUILTIN));
   }
 }
 
 void receiveData();
 
-void setup(){
+void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
   Serial.begin(115200);
   delay(500); // <-- Añade este delay para asegurar que la conexión se establece correctamente antes de iniciar SerialTelem
-  SerialTelem.begin(1000000,SERIAL_8N1,5,6); //Rx = 5, Tx = 6
+  SerialTelem.begin(1000000, SERIAL_8N1, 5, 6); //Rx = 5, Tx = 6
+
   Serial.println("Iniciando ESP32 Telemetry...");
   connectToWiFi(ssid, pwd);
-  timeStart = millis();
+  //timeStart = millis();
   posBuffer = 0;
   posTele = 0;
 
   delay(2000);
   Serial.println("Antes");
 
-  udp.beginPacket(udpAddress,udpPort);
+  udp.beginPacket(udpAddress, udpPort);
   udp.printf("Conexión establecida");
   udp.endPacket();
 
   Serial.println("Despues");
 }
 
-void loop(){
-  if(SerialTelem.available()){
+void loop() {
+  if (SerialTelem.available()) {
     receiveData();
   }
 }
 
-void connectToWiFi(const char * ssid, const char * pwd){
+void connectToWiFi(const char * ssid, const char * pwd) {
   Serial.println("Connecting to WiFi network: " + String(ssid));
 
   // delete old config
@@ -111,7 +112,7 @@ void connectToWiFi(const char * ssid, const char * pwd){
 }
 
 //wifi event handler
-void WiFiEvent(WiFiEvent_t event){
+void WiFiEvent(WiFiEvent_t event) {
     switch(event) {
       case SYSTEM_EVENT_STA_GOT_IP:
           //When connected set 
@@ -157,18 +158,18 @@ void receiveData() {
   uint8_t rx = SerialTelem.read();
   switch (rxState) {
     case RXState::idle :
-      if(rx == 0xAA){           //Recibido inicio de pqquete
+      if (rx == 0xAA) {           //Recibido inicio de pqquete
         rxState = RXState::recibiendoInicioTX;
         NumPreambulo=1;         //Ya tenemos el primero
       }
     break;
     case RXState::recibiendoInicioTX :
-      if(rx == 0xAA){
+      if (rx == 0xAA) {
         NumPreambulo++;
-        if(NumPreambulo > 3){   //Hemos recibido ya los 4 0xAA que indican el inicio del paquete
+        if (NumPreambulo > 3) {   //Hemos recibido ya los 4 0xAA que indican el inicio del paquete
           rxState = RXState::recibiendoTipoPaquete;
         }
-      }else{                    //No era un inicio de paquete
+      } else {                    //No era un inicio de paquete
         udp.beginPacket(udpAddress,udpPort);//Como ha fallado algo, vamos a enviar una tráma general en la que indiquemos que algo ha fallado
         udp.write(5);
         udp.printf("Se esperaba la cabercera de inicio pero no llego--");
@@ -179,13 +180,13 @@ void receiveData() {
       }
     break;
     case RXState::recibiendoTipoPaquete :
-      if(rx < 6){    //Por ahora unicamente tenemos 5 tipos de paquetes
+      if (rx < 6) {    //Por ahora unicamente tenemos 5 tipos de paquetes
         posBufferTelem = 0;
         TeleBuffer[posBufferTelem] = rx;      //Guardamos el tipo de paquete en el buffer para que esté al inicio de la trama udp que vamos a enviar
         posBufferTelem++;
         datosPendientesDeRecibir = DataLenth[rx]; //Dependiendo del tipo de paquete, tendremos que recibir una cantidad de datos
         rxState = RXState::recibiendoDatos;   //Siguiente estado
-      }else{    //Hemos recibido un tipo de paquete no reconocido, y no sabremos el tamaño, por lo que lo ignoraremos
+      } else {    //Hemos recibido un tipo de paquete no reconocido, y no sabremos el tamaño, por lo que lo ignoraremos
         rxState = RXState::idle;
       }    
     break;
@@ -193,7 +194,7 @@ void receiveData() {
       datosPendientesDeRecibir--;
       TeleBuffer[posBufferTelem] = rx;
       posBufferTelem++;
-      if(datosPendientesDeRecibir == 0){    //Ya hemos recibido todos los datos
+      if (datosPendientesDeRecibir == 0) {    //Ya hemos recibido todos los datos
         udp.beginPacket(udpAddress,udpPort);//Enviamos los datos por UDP
         udp.write(TeleBuffer, posBufferTelem);  //El tamaño coincide con la posicion en la que estamos en el TeleBuffer
         udp.endPacket();
