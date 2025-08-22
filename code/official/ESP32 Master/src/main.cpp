@@ -13,6 +13,12 @@
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
+#define ENABLE_TELEMETRY true
+
+// Speeds
+#define StartSpeed 4
+#define CruisiereSpeed 10
+#define NormalSpeed 5
 
 // Servo and direction variables
 
@@ -33,13 +39,15 @@ uint8_t bateria;
 enum e {
   Inicio,
   Recto,
-  DecidiendoGiro,
-  PreGiro,
-  Girando,
   Final,
   Prueba
 };
 uint8_t estado = e::Inicio;
+
+// track constants
+
+// size of the map (mm)
+#define mapSize 3000
 
 // journey variables
 
@@ -116,7 +124,6 @@ Melody melody4 = MelodyFactory.load("Cornfield chase 4", 625, notes4, 18);
 u_int16_t distancia90;
 u_int16_t distancia270;
 
-
 // Delcarations
 
 // calculate the error in the direction
@@ -158,10 +165,13 @@ void checkTurn();   // check wether you have to turn or not
 void setup() {
   // put your setup code here, to run once:
 
-  // begin serial
-  Serial.begin(115200);
+  #if ENABLE_TELEMETRY == true
   // begin telemetry serial
   teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+  #else
+  // begin serial
+  Serial.begin(115200);
+  #endif
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
@@ -175,7 +185,9 @@ void setup() {
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
   mimpu.WorkOffset();
-  delay(1000);
+
+  delay(500);
+
   // begin the lidar
   lidar.begin(lidarSerial);
   rplidar_response_device_info_t info;
@@ -204,10 +216,7 @@ void setup() {
   delay(500);
 
   // wait until y coordinate is calculated
-  while (readDistance(0) == 0)
-  {
-    delay(100);
-  }
+  while (readDistance(0) == 0) delay(100);
   setYcoord(readDistance(0));
   delay(500);
 
@@ -224,7 +233,7 @@ void setup() {
   delay(1000);
 
   // start driving (set a speed to the car and initialize the mpu)
-  setSpeed(4);
+  setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
 }
 
@@ -255,18 +264,16 @@ void loop() {
     prev_ms_position = millis() + 32;
   }
 
+  #if ENABLE_TELEMETRY == true
   // send telemetry every 100ms
   static uint32_t prev_ms_tele = millis();
   if (millis() > prev_ms_tele+500)
   {
-
     /*FORMATO TELEMETRIA
     |inicioTX            |TipoPaquete|Datos|
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
-
-   /***************************************************************** 
     for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
@@ -277,7 +284,7 @@ void loop() {
         teleSerial.write(distances[zi]>>8);
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
-    }*/
+    }
    
     /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
@@ -338,7 +345,7 @@ void loop() {
     
     prev_ms_tele = millis();
   }
-
+  #endif
 
   // check turn every 50ms
   static uint32_t prev_ms_turn = millis();
@@ -378,7 +385,7 @@ void loop() {
           vTaskDelete(Task1);
           analogWrite(pinLIDAR_motor, 0);
           estado = e::Recto;
-          setSpeed(5);
+          setSpeed(NormalSpeed);
           digitalWrite(pinBuzzer, LOW);
         }
       }
@@ -541,7 +548,7 @@ void LidarTaskCode(void * pvParameters) {
       // obtain the index associated with the angle and store in the array
       uint16_t index = getIndex(angle);
 
-      if (distance > 100 && distance < 3000)
+      if (distance > 100 && distance < mapSize)
       { 
         //bool  startBit = lidar.getCurrentPoint().startBit; //whether this point belongs to a new scan
         //byte quality = lidar.getCurrentPoint().quality;
@@ -628,7 +635,7 @@ void setXcoord(uint16_t i) {
 }
 
 void setYcoord(uint16_t f) {
-  yPosition = 3000 - f - 150;
+  yPosition = mapSize - f - 150;
 }
 
 void checkTurn() {
@@ -685,7 +692,7 @@ void decideTurn() {
 void enviarDato(byte* pointer, int8_t size) {
   int8_t posicion = size - 1;   //recorreremos la memoria desde el de mas valor hara el de menos, ya que el 
                           //receptor espera ese orde MSB
-  while(posicion >= 0 ){
+  while (posicion >= 0 ) {
     teleSerial.write(pointer[posicion]);
     posicion--;
   }

@@ -1,9 +1,14 @@
 #include <Arduino.h>
 #include <AdvancedMPU.h>
 #include <RPLidar.h>
-#include "credentials.h"
+//#include "credentials.h"
 #include "pinAssignments.h"
 
+#include <rom/rtc.h>
+#include <esp_task_wdt.h>
+
+// Practice mode (Button desabled) for easy launches while testing
+#define PRACTICE_MODE true
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
@@ -58,7 +63,8 @@ uint8_t firma2Y = 21;
 enum e {
   Inicio,
   Recto,
-  Final
+  Final,
+  Prueba
 };
 uint8_t estado = e::Inicio;
 
@@ -94,6 +100,8 @@ uint32_t prev_encoderMeasurement;
 
 uint16_t distances[360];
 static uint16_t distancesMillis[360];
+u_int16_t distancia90;
+u_int16_t distancia270;
 
 // car position on the map (origin at the bottom-left corner)
 
@@ -104,7 +112,7 @@ double yPosition = 0;
 
 // position PID controller variables
 
-#define positionKP 0.2
+#define positionKP 0.2  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
 int objectivePosition = 0;
 float positionError;
@@ -198,7 +206,6 @@ void setup() {
   // begin serial
   Serial.begin(115200);
   #endif
-  
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
@@ -229,6 +236,7 @@ void setup() {
   // detected...
   lidar.startScan();
 
+  //esp_task_wdt_deinit();
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
     LidarTaskCode,
@@ -253,7 +261,7 @@ void setup() {
   digitalWrite(pinLED_verde, LOW);
   if (yPosition >= 1500) bloqueEnMedio = true;
 
-  /*
+  #if PRACTICE_MODE == false
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
@@ -261,7 +269,8 @@ void setup() {
       receiveData();
     }
   }
-  digitalWrite(pinLED_verde, LOW);*/
+  digitalWrite(pinLED_verde, LOW);
+  #endif
   delay(500);
 
   // start driving (set a speed to the car and initialize the mpu)
@@ -299,9 +308,8 @@ void loop() {
   #if ENABLE_TELEMETRY == true
   // send telemetry every 100ms
   static uint32_t prev_ms_tele = millis();
-  if (millis() > prev_ms_tele+100)
+  if (millis() > prev_ms_tele + 100)
   {
-
     /*FORMATO TELEMETRIA
     |inicioTX            |TipoPaquete|Datos|
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
@@ -371,6 +379,11 @@ void loop() {
     enviarDato((byte*)&bateria,sizeof(bateria));
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
+    enviarDato((byte*)&tramo,sizeof(tramo));
+    enviarDato((byte*)&distancia90,sizeof(distancia90));
+    enviarDato((byte*)&distancia270,sizeof(distancia270));
+    for (byte i=0; i<10; i++) teleSerial.write(byte(00));
+    /*
     enviarDato((byte*)&firma1Detectada,sizeof(firma1Detectada));
     enviarDato((byte*)&firma1X,sizeof(firma1X));
     enviarDato((byte*)&firma1Y,sizeof(firma1Y));
@@ -378,8 +391,7 @@ void loop() {
     enviarDato((byte*)&firma2X,sizeof(firma2X));
     enviarDato((byte*)&firma2Y,sizeof(firma2Y));
     enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));         //********
-    enviarDato((byte*)&tramo,sizeof(tramo)); 
-
+    */
     prev_ms_tele = millis();
   }
   #endif
@@ -409,15 +421,18 @@ void loop() {
   switch (estado)
   {
   case e::Inicio:
-    if (yPosition >= 2000) {
+    if (yPosition >= 1750) {
       decideTurn();
+      if (yPosition >= 2200) setSpeed(0);
       if (turnSense !=0 ) {
         firma1Detectada = firma2Detectada = false;
-        setXcoord(readDistance(270));
+        if (distancia270) setXcoord(distancia270);
+        else setXcoord(mapSize - distancia90);
         objectivePosition = xPosition;
+        vTaskDelete(Task1);
         analogWrite(pinLIDAR_motor, 0);
         estado = e::Recto;
-        //setSpeed(7);
+        setSpeed(NormalSpeed);
       }
     }
   break;
@@ -524,20 +539,31 @@ uint16_t getIndex(float angle) {
   }
 }
 
+#define numberOfMeasures 5
 // Angle from 0 to 359
 uint16_t readDistance(uint16_t angle) {
-  int index = -5;
-  int validIndex = index;
-  int validMeasures[10];
+  int index = -numberOfMeasures;
+  int validIndex = 0;
+  int validMeasures[2*numberOfMeasures];
 
-  while (index < 5) {
+  int index2 = -numberOfMeasures;
+  uint16_t f_distances[360];
+  uint16_t f_distancesMillis[360];
+  
+  
+  for (int i = 0; i < 360; i++) {
+    f_distances[i] = distances[i];
+    f_distancesMillis[i] = distancesMillis[i];
+  }
+  
+
+  while (index < numberOfMeasures) {
     // work out the resultant index for the distances array
     int resAngle = angle + index;
     if (resAngle < 0) resAngle += 360;
-
     // check whether the measurement is non zero and new and store it into the next place of the array
-    if (distances[resAngle] == 0) {}
-    else if ((millis() - distancesMillis[resAngle]) < 500)
+    if (f_distances[resAngle] == 0) {}
+    else if ((millis() - f_distancesMillis[resAngle]) < 800)
     {
       validMeasures[validIndex] = resAngle;
       validIndex++;
@@ -547,8 +573,8 @@ uint16_t readDistance(uint16_t angle) {
   }
   // search for two consecutive measurements that are similar
   for (int arrayIndex = 1; arrayIndex < validIndex; arrayIndex++) {
-    if (abs(distances[validMeasures[arrayIndex]] - distances[validMeasures[arrayIndex - 1]]) < 50) {
-      return distances[validMeasures[arrayIndex]];
+    if (abs(f_distances[validMeasures[arrayIndex]] - f_distances[validMeasures[arrayIndex - 1]]) < 50) {
+      return _min(f_distances[validMeasures[arrayIndex]], f_distances[validMeasures[arrayIndex - 1]]);
     }
   }
   // if the search fails return 0
@@ -577,7 +603,7 @@ void LidarTaskCode(void * pvParameters) {
       }
       uint16_t index = getIndex(angulo);
       
-      if (distance > 100 && distance < 3000)
+      if (distance > 100 && distance < mapSize)
       { 
         //bool  startBit = lidar.getCurrentPoint().startBit; //whether this point belongs to a new scan
         //byte quality = lidar.getCurrentPoint().quality;
@@ -767,12 +793,14 @@ void checkTurn() {
 }
 
 void decideTurn(){
-  if (readDistance(90) > readDistance(270) && readDistance(90) > 1000)
+  distancia90 = readDistance(90);
+  distancia270 = readDistance(270);
+  if (distancia90 > distancia270 && distancia90 > 1000)
   {
     turnSense = -1;
     turnClockWise = true;
   }
-  else if (readDistance(270) > readDistance(90) && readDistance(270) > 1000)
+  else if (distancia270 > distancia90 && distancia270 > 1000)
   {
     turnSense = 1;
     turnClockWise = false;
@@ -792,7 +820,7 @@ void correctLane(uint8_t _tramo) {
 void enviarDato(byte* pointer, int8_t size){
   int8_t posicion = size - 1;   //recorreremos la memoria desde el de mas valor hara el de menos, ya que el 
                           //receptor espera ese orde MSB
-  while(posicion >= 0 ){
+  while (posicion >= 0 ) {
     teleSerial.write(pointer[posicion]);
     posicion--;
   }
