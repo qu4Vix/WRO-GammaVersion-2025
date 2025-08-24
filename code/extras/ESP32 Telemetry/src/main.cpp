@@ -27,7 +27,7 @@ uint16_t posBuffer;
 uint8_t TeleBuffer[1000];
 uint16_t posTele;
 
-uint16_t DataLenth[6] = {5,10,15,360,720,35};   //Dependiendo del tipo de paquete, éste contendrá cierta cantidad de datos
+uint16_t DataLenth[8] = {5,10,15,360,720,720,39,10};   //Dependiendo del tipo de paquete, éste contendrá cierta cantidad de datos
                                                 //  -0 -> 5 datos     ->NA
                                                 //  -1 -> 10 datos    ->NA
                                                 //  -2 -> 15 datos    ->NA
@@ -180,7 +180,7 @@ void receiveData() {
       }
     break;
     case RXState::recibiendoTipoPaquete :
-      if (rx < 6) {    //Por ahora unicamente tenemos 5 tipos de paquetes
+      if (rx < (sizeof(DataLenth)/sizeof(DataLenth[0]))) {    //Por ahora unicamente tenemos 5 tipos de paquetes
         posBufferTelem = 0;
         TeleBuffer[posBufferTelem] = rx;      //Guardamos el tipo de paquete en el buffer para que esté al inicio de la trama udp que vamos a enviar
         posBufferTelem++;

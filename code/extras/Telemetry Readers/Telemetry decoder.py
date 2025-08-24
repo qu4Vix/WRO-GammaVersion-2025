@@ -43,57 +43,64 @@ def parse_packet(receivedBytes):
             return {'LidarDistancias': LidarDistancias,
                     'Distacias90' : Lidar90,
                     'Disrancias270' : Lidar270}
-        elif cabecera == 5:
-            print("Cabecera 5: Informacion ------------------....................")
+        elif cabecera == 6:
+            print("Cabecera 6: Informacion ------------------....................")
             #print("Contenido", receivedBytes)
             #print("Human =", " ".join(str(b) for b in receivedBytes))
             # Parse fields
-            i = 1
             
+            i = 1
+            Millis = (receivedBytes[i] << 24 |
+                        receivedBytes[i + 1] << 16 |
+                        receivedBytes[i + 2] << 8 |
+                        receivedBytes[i + 3])
+            i = 5
             PosicionX = (receivedBytes[i] << 24 |
                         receivedBytes[i + 1] << 16 |
                         receivedBytes[i + 2] << 8 |
                         receivedBytes[i + 3])
-            print("posicionx"+str(PosicionX))
-            i = 5
+            #print("posicionx"+str(PosicionX))
+            i = 9
             PosicionY = (receivedBytes[i] << 24 |
                         receivedBytes[i + 1] << 16 |
                         receivedBytes[i + 2] << 8 |
                         receivedBytes[i + 3])
-            i = 9
+            i = 13
             PosicionXObjetivo = (receivedBytes[i] << 24 |
                                 receivedBytes[i + 1] << 16 |
                                 receivedBytes[i + 2] << 8 |
                                 receivedBytes[i + 3])
-            i = 13
+            i = 17
             PosicionYObjetivo = (receivedBytes[i] << 24 |
                                 receivedBytes[i + 1] << 16 |
                                 receivedBytes[i + 2] << 8 |
                                 receivedBytes[i + 3])
-            i = 17
+            i = 21
             Encoder = (receivedBytes[i] << 24 |
                     receivedBytes[i + 1] << 16 |
                     receivedBytes[i + 2] << 8 |
                     receivedBytes[i + 3])
-            i = 21
+            i = 25
             Estado = receivedBytes[i]
-            i = 22
+            i = 26
             Bateria = receivedBytes[i]
-            i = 23
+            i = 27
+            firstBit = receivedBytes[i] >> 7
             angulo = (receivedBytes[i] << 24 |
                     receivedBytes[i + 1] << 16 |
                     receivedBytes[i + 2] << 8 |
-                    receivedBytes[i + 3])
-            i = 27
+                    receivedBytes[i + 3]) - ((firstBit) << 32)
+            i = 31
+            firstBit = receivedBytes[i] >> 7
             anguloObjetivo = (receivedBytes[i] << 24 |
                             receivedBytes[i + 1] << 16 |
                             receivedBytes[i + 2] << 8 |
-                            receivedBytes[i + 3])
-            i =31
+                            receivedBytes[i + 3]) - ((firstBit) << 32)
+            i =35
             tramo=receivedBytes[i]
-            i = 32
+            i = 36
             distancia90 = (receivedBytes[i] << 8) | receivedBytes[i+1]
-            i = 34
+            i = 38
             distancia270 = (receivedBytes[i] << 8) | receivedBytes[i+1]
             
             '''
@@ -120,6 +127,7 @@ def parse_packet(receivedBytes):
             print("Si,si.................")
             
             return {
+                'Millis': Millis,
                 'PosicionX': PosicionX,
                 'PosicionY': PosicionY,
                 'PosicionXObjetivo': PosicionXObjetivo,
@@ -129,6 +137,7 @@ def parse_packet(receivedBytes):
                 'Bateria': Bateria,
                 'angulo': angulo,
                 'anguloObjetivo': anguloObjetivo,
+                'tramo':tramo,
                 'distancia90':distancia90,
                 'distancia270':distancia270,
             }
