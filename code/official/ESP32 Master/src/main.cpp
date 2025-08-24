@@ -285,6 +285,19 @@ void loop() {
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
     }
+
+    for(int i = 0; i<4; i++){
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(05);
+    uint16_t wi=0;
+    while (wi < 360)
+    {
+        uint16_t distanceAge =  millis() - distancesMillis[zi];
+        teleSerial.write(distanceAge>>8);
+        teleSerial.write(distanceAge&0x00ff);
+        wi++;
+    }
    
     /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete

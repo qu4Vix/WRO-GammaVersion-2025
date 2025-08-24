@@ -43,6 +43,21 @@ def parse_packet(receivedBytes):
             return {'LidarDistancias': LidarDistancias,
                     'Distacias90' : Lidar90,
                     'Disrancias270' : Lidar270}
+        elif cabecera == 5:
+            #print("Cabecera 5: Lidar Distancias Tiempo ------------------")
+            LidarMillis = []
+            Lidar90m = []
+            Lidar270m = []
+            for i in range(1, 721, 2):
+                d = (receivedBytes[i] << 8) | receivedBytes[i + 1]
+                LidarMillis.append(d)
+            for i in range(-5,5,1):
+                Lidar90m.append(LidarMillis[90+i])
+            for i in range(-5,5,1):
+                Lidar270m.append(LidarMillis[270+i])
+            return {'LidarDistancias': LidarMillis,
+                    'Distacias90' : Lidar90m,
+                    'Disrancias270' : Lidar270m}
         elif cabecera == 6:
             print("Cabecera 6: Informacion ------------------....................")
             #print("Contenido", receivedBytes)
