@@ -10,7 +10,7 @@
  * 
  * This is the code for the "Slave" ESP32 of our robot, which it is in charge of combining
  * all the different data from several sensors (camera, encoder...) and send it to the
- * main ESP32 board (the "Master") to be processed and translated into the correct moving
+ * main ESP32 board (the "Master") to be processed and converted into the right movements
  * of the robot.
  * 
 ****************************************************/
@@ -42,6 +42,7 @@ HUSKYLENSResult fHusky;
 
 #define TAMANO_MINIMO_ESQUIVE 20
 #define ALTURA_MINIMA_ESQUIVE 40
+#define MinRatioForBlock 1 
 
 #endif
 
@@ -213,9 +214,11 @@ void calculateNearestBlockAndSendCamera (){
 
   int16_t blocksIndexNumber[numberOfBlocks];
   uint16_t blocksHeight[numberOfBlocks];
+  uint16_t blocksWidth[numberOfBlocks];
 
-  int16_t maxHeightIndex;
-  uint16_t maxHeight = 0;
+  //SI CAUSA PROBLEMAS PONER LAS VARIABLES =0
+  int16_t maxHeightIndex = -1;
+  int16_t maxHeight = -1;
 
   for (int i = 0; i < numberOfBlocks; i++)
   {
@@ -223,18 +226,26 @@ void calculateNearestBlockAndSendCamera (){
     
     fHusky = Husky.getBlockLearned(i);
     blocksHeight[i] = fHusky.height;
+    blocksWidth[i] = fHusky.width;
   }
 
   for (int i = 0; i < numberOfBlocks; i++)
   {
-    if(blocksHeight[i] > maxHeight)
+    if((blocksHeight[i] > maxHeight) && (((double)blocksHeight[i]/(double)blocksWidth[i]) > MinRatioForBlock))
     {
       maxHeight = blocksHeight[i];
       maxHeightIndex = blocksIndexNumber[i];
     } 
   }
 
-  fHusky = Husky.getBlockLearned(maxHeightIndex);
-  sendCamera(fHusky.ID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));
+  //Para evitar errores en casos de que sea necesario [SI CAUSA PROBLEMAS ELIMINAR]
+  
+  if((maxHeightIndex == -1 ) || (maxHeight == -1)) 
+  {
+
+  }else{
+    fHusky = Husky.getBlockLearned(maxHeightIndex);
+    sendCamera(fHusky.ID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));
+  }
 }
 #endif
