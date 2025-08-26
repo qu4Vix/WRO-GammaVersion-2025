@@ -2,7 +2,8 @@
  * 
  * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
  * 
- * This code is under a GPL-3.0 license
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
  * 
 ****************************************************/
 
@@ -15,7 +16,10 @@
  * 
 ****************************************************/
 
+
+
 // ***** INCLUDING THE LIBRARIES *****
+
 #include <Arduino.h>
 #include <Motor.h>
 #include <CServo.h>
@@ -25,76 +29,79 @@
 #include "pinAssignments.h"
 #include <rom/rtc.h>
 
-#define ENABLE_WIFI false // WIFI IS NOT USED ON THIS BOARD
-#define ROUND_NUMBER 2  // Change this to 1 for round Open Challenge and 2 for round Obstacle Challenge
+
+
+// ***** ESTABLISHING DEFINES *****
+
+#define ENABLE_WIFI false         // WIFI IS NOT USED ON THIS BOARD
+#define ROUND_NUMBER 2            // Change this to 1 for round Open Challenge and 2 for round Obstacle Challenge
+
+// Everytime we see a #if ROUND_NUMBER == 2 this is made to avoid running that part of the code when we are in Open Challenge and only run it in Obstacle Challenge
+#if ROUND_NUMBER == 2 
+#define TAMANO_MINIMO_ESQUIVE 20  // This is not used right now, but it is kept just in case we need it
+#define ALTURA_MINIMA_ESQUIVE 40  // This is not used right now, but it is kept just in case we need it
+#define MinRatioForBlock 1        // THIS IS THE MINIMUM HEIGH/WIDH RATIO NEEDED TO DETECT A BLOCK. This is part of a system to avoid detecting the orange line as a red block
+#endif
+
+
+
+// ***** INITIALIZING VARIABLES, OBJECTS AND FUNCTIONS *****
 
 hw_timer_t* timerHandler;
-
 HardwareSerial commSerial(1);
 Motor mimotor(pinPWM, pinDir1, pinDir2, pinEn, 0.25, 1);
 CServo miservo(pinServo);
 Encoder miencoder(pinEncoder_DT);
-
 HUSKYLENS Husky;
 HUSKYLENSResult fHusky;
-
-#if ROUND_NUMBER == 2
-
-#define TAMANO_MINIMO_ESQUIVE 20
-#define ALTURA_MINIMA_ESQUIVE 40
-#define MinRatioForBlock 1 
-
-#endif
 
 volatile int speed;
 int objectiveSpeed;
 
-
 void IRAM_ATTR onTimer();
-
 void receiveData();
 void sendEncoder(uint32_t encoder);
-void sendTension(uint8_t batteryLevel);
+void sendVoltage(uint8_t batteryLevel);
 void sendResetReason();
-void actualizarBateria();
+void updateBattery();
 void calculateNearestBlockAndSendCamera ();
-// Battery levels
-// 8.4V - 3600
-// 8V - 3300
-// 7.6V - 3100
-
 #if ROUND_NUMBER == 2
 void sendCamera(uint8_t signature, uint16_t x, uint16_t y);
 #endif
 
+
+
+// ***** SETUP CODE *****
+// This code will only run once, just after turning on the ESP32
+
 void setup() {
-  // put your setup code here, to run once:
+
+  // Initializing code for the Serial, this is only used for debug and not during the match
   Serial.begin(115200);
   Serial.println("Empezando");
 
+  // Initializing code for the  I2C, this is the connection to the camera
   Wire.begin(18,19);
   while(!Husky.begin(Wire)) delay(100);
   
+  // A function of the pinAssigments.h include
   setPinModes();
 
+  // Initializing the Communication Serial, this is how the Slave communicates to the Master
   commSerial.begin(1000000, SERIAL_8N1, pinTX, pinRX);
 
+  // WIFI IS NOT USED
   #if ENABLE_WIFI == true
-  
   #endif
   
   delay(5000);
 
-  //sendResetReason();
-
+  // Initializing time managment
   timerHandler = timerBegin(0, 80, true);
   timerAttachInterrupt(timerHandler, &onTimer, false);
   timerAlarmWrite(timerHandler, 32000, true);
-  
-  #if ROUND_NUMBER == 2
-  
-  #endif
 
+  // Initializing the encoder, motor and servo
   miencoder.Attach(CHANGE);
   mimotor.Init();
   miservo.BeginPWM();
@@ -103,32 +110,41 @@ void setup() {
   timerAlarmEnable(timerHandler);
 }
 
+
+
+// ***** LOOP CODE *****
+// This code runs repeatedly
+
 void loop() {
-  // put your main code here, to run repeatedly:
-  
+    
+  // This receives data from the master, as the Serial Communication master-slave is a two way communication
   while (commSerial.available())
   {
     receiveData();
   }
 
+  // Sends to the motor the right speed
   static uint32_t prev_ms_speed;
   if (millis() > prev_ms_speed) {
     mimotor.SetSpeed(speed, objectiveSpeed);
     prev_ms_speed = millis() + 32;
   }
 
+  // Sends the battery level
   static uint32_t prev_ms_bat = millis();
   if (millis() > prev_ms_bat) {
-    actualizarBateria();
+    updateBattery();
     prev_ms_bat = millis() + 500;
   }
 
+  // Sends the measurements of the encoder
   static uint32_t prev_ms_encoder = millis();
   if (millis() > prev_ms_encoder) {
     sendEncoder(miencoder.GetEncoder());
     prev_ms_encoder = millis() + 32;
   }
 
+  // Sends the position and type of the nearest block detected by the camera
   #if ROUND_NUMBER == 2
   static uint32_t prev_ms_camera = millis();
   if (millis() > prev_ms_camera) {
@@ -138,10 +154,15 @@ void loop() {
   #endif
 }
 
+
+
+// ***** FUNCTIONS *****
+
 void IRAM_ATTR onTimer() {
   speed = miencoder.GetEncoderInterval();
 }
 
+// Sends back to the master the encoder information using our own communication protocol
 void sendEncoder(uint32_t encoder) {
   uint8_t encoderBuffer[4];
   for (uint8_t i; i<4; i++) {
@@ -151,12 +172,13 @@ void sendEncoder(uint32_t encoder) {
   commSerial.write(encoderBuffer, 4);
 }
 
-void sendTension(uint8_t batteryLevel) {
+// Sends back to the master the battery level
+void sendVoltage(uint8_t batteryLevel) {
   commSerial.write(6);
   commSerial.write(batteryLevel);
 }
 
-//Adaptar para la husky
+// Sends back the x and y position of the detected block and also its signature (1 or 2 depending on the color)
 #if ROUND_NUMBER == 2
 void sendCamera(uint8_t signature, uint16_t x, uint16_t y) {
   uint8_t _x = uint8_t(x/2);
@@ -168,16 +190,18 @@ void sendCamera(uint8_t signature, uint16_t x, uint16_t y) {
 }
 #endif
 
+// Sends the reset reason back to the master
 void sendResetReason() {
   commSerial.write(4);
   commSerial.write(rtc_get_reset_reason(0));
   commSerial.write(rtc_get_reset_reason(1));
 }
 
+// This function is in charge of receiving the data sent to the slave by the master. This consists of the speed we want to move the robot and the angle for the servo
 void receiveData() {
   uint8_t firstByte;
   commSerial.readBytes(&firstByte, 1);
-  if (firstByte == 1)
+  if (firstByte == 1) // This reads the speed information
   {
     uint8_t _velocity;
     commSerial.readBytes(&_velocity, 1);
@@ -185,7 +209,7 @@ void receiveData() {
     int speed = (_velocity - _speed) ? -_speed : _speed;
     objectiveSpeed = speed;
   } else 
-  if (firstByte == 2)
+  if (firstByte == 2) // This reads the angle information
   {
     uint8_t _angleByte;
     commSerial.readBytes(&_angleByte, 1);
@@ -194,20 +218,22 @@ void receiveData() {
   }
 }
 
-void actualizarBateria() {
-  uint16_t tension = analogRead(pinTension);
-  if (tension >= 3300) {
+// Reads the current voltage of the battery
+void updateBattery() {
+  uint16_t voltage = analogRead(pinVoltage);
+  if (voltage >= 3300) {
     // HIGH LEVEL
-    sendTension(1);
-  } else if (tension >= 3100) {
+    sendVoltage(1);
+  } else if (voltage >= 3100) {
     // MEDIUM LEVEL
-    sendTension(2);
+    sendVoltage(2);
   } else {
     // LOW LEVEL
-    sendTension(3);
+    sendVoltage(3);
   }
 }
 
+// This function looks for the nearest block and sents back its information (position and ID). This code is made to avoid confusion with the orange line of the board or the parking walls 
 #if ROUND_NUMBER == 2
 void calculateNearestBlockAndSendCamera (){
   int16_t numberOfBlocks = Husky.countBlocksLearned();
@@ -216,10 +242,10 @@ void calculateNearestBlockAndSendCamera (){
   uint16_t blocksHeight[numberOfBlocks];
   uint16_t blocksWidth[numberOfBlocks];
 
-  //SI CAUSA PROBLEMAS PONER LAS VARIABLES =0
   int16_t maxHeightIndex = -1;
   int16_t maxHeight = -1;
 
+  // Because the camera detects all blocks and doesn't tell us which is closer, we first read all of them and put their information in this three arrays
   for (int i = 0; i < numberOfBlocks; i++)
   {
     blocksIndexNumber[i] = i;
@@ -228,7 +254,8 @@ void calculateNearestBlockAndSendCamera (){
     blocksHeight[i] = fHusky.height;
     blocksWidth[i] = fHusky.width;
   }
-
+  
+  // Now we search which block is the highest (closer to the camera). That block has to be taller than it is wide because otherwise it is probably a line, as lines will often be wider than they are tall.
   for (int i = 0; i < numberOfBlocks; i++)
   {
     if((blocksHeight[i] > maxHeight) && (((double)blocksHeight[i]/(double)blocksWidth[i]) > MinRatioForBlock))
@@ -238,14 +265,12 @@ void calculateNearestBlockAndSendCamera (){
     } 
   }
 
-  //Para evitar errores en casos de que sea necesario [SI CAUSA PROBLEMAS ELIMINAR]
-  
+  // This conditional avoids having problems when the camera does not detect any valid object
   if((maxHeightIndex == -1 ) || (maxHeight == -1)) 
   {
-
   }else{
     fHusky = Husky.getBlockLearned(maxHeightIndex);
-    sendCamera(fHusky.ID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));
+    sendCamera(fHusky.ID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));  // We use this rule of three to adapt it to an older version of this code
   }
 }
 #endif

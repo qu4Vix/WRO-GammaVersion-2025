@@ -1,18 +1,44 @@
+/***************************************************
+ * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
+ * 
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
+ * 
+****************************************************/
+
+/***************************************************
+ * 
+ * This is the code for the "Main" ESP32 of our robot, which it is responsible for controlling
+ * some sensors and to make all the decisions.
+ * 
+ * THIS VERSION OF THE ESP32 MASTER CODE IS ONLY FOR THE OPEN CHALLENGE
+ * For the Obstacle Challenge use "ESP32 MASTER OBSTACLES"
+ *  
+****************************************************/
+
+
+
+// ***** INCLUDING THE LIBRARIES *****
+
 #include <Arduino.h>
 #include <AdvancedMPU.h>
 #include <RPLidar.h>
 #include <melody_factory.h>
 #include <melody_player.h>
-//#include "credentials.h"
 #include "pinAssignments.h"
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
+
+
+
+// ***** ESTABLISHING DEFINES *****
 
 // Practice mode (Button desabled) for easy launches while testing
 #define PRACTICE_MODE true
 
 // Enables wifi functions when true
-#define ENABLE_WIFI false
+#define ENABLE_WIFI false       // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
 #define ENABLE_TELEMETRY true
 
 // Speeds
@@ -21,18 +47,25 @@
 #define NormalSpeed 5
 
 // Servo and direction variables
-
 #define servoKP 2.5
 #define servoKD 0
+
+// position PID controller variables
+#define positionKP 0.1
+#define positionKD 1
+
+
+
+// ***** INITIALIZING VARIABLES, OBJECTS AND FUNCTIONS *****
 int prev_setAngle;
 int actual_directionError;
 int prev_directionError;
 float objectiveDirection;
 
-// battery level variable
+// Battery level variable
 uint8_t bateria;
 
-// conversion between mm and encoder counts
+// Conversion between mm and encoder counts
 #define MMperEncoder 1.41
 
 // List of possible states for the car
@@ -44,46 +77,34 @@ enum e {
 };
 uint8_t estado = e::Inicio;
 
-// track constants
-
-// size of the map (mm)
+// Size of the map (mm)
 #define mapSize 3000
 
-// journey variables
-
+// Journey variables
 uint8_t giros = 0;
 uint8_t tramo = 0;
 int8_t turnSense = 0;
 
-// encoder variables
-
+// Encoder variables
 uint32_t encoderMeasurement;
 uint32_t prev_encoderMeasurement;
 
-// lidar measurement variables
-
+// Lidar measurement variables
 uint16_t distances[360];
 static uint16_t distancesMillis[360];
 
-// car position on the map (origin at the bottom-left corner)
+// Car position on the map (origin at the bottom-left corner)
+double xPosition = 0;   // x position of the car (increases to the right)
+double yPosition = 0;   // y position of the car (increases upwards)
 
-// x position of the car (increases to the right)
-double xPosition = 0;
-// y position of the car (increases upwards)
-double yPosition = 0;
-
-// position PID controller variables
-
-#define positionKP 0.1
-#define positionKD 1
+// Position PID controller variables
 int objectivePosition = 0;
 int positionError;
 int prev_positionError;
 bool fixXposition = true;
 bool fixInverted = true;
 
-// object declarations
-
+// Object declarations
 MPU mimpu;
 HardwareSerial lidarSerial(2);
 RPLidar lidar;
@@ -102,7 +123,7 @@ String notes1[nNotes] =
   "C4", "E5", "SILENCE",    "C4", "E5", "SILENCE",    "D4", "E5", "SILENCE"
 };
 const uint16_t timeUnit = 625;
-// create a melody
+// Create a melody
 Melody melody1 = MelodyFactory.load("Cornfield chase", timeUnit, notes1, nNotes);
 String notes2[9] = {"D4", "D4", "D4", "D4", "E5", "E5", "E5", "E5", "B4"};
 Melody melody2 = MelodyFactory.load("Cornfield chase 2", 156, notes2, 9);
@@ -124,82 +145,78 @@ Melody melody4 = MelodyFactory.load("Cornfield chase 4", 625, notes4, 18);
 u_int16_t distancia90;
 u_int16_t distancia270;
 
-// Delcarations
+// Declarations
+int directionError(int bearing, int target);  // calculate the error in the direction
 
-// calculate the error in the direction
-int directionError(int bearing, int target);
-
-// esp32 intercommunication functions
-
-// set the car's speed
-void setSpeed(int speed);
-// set the angle of the servo
-void setSteering(int angle);
-// receive data from the serial
-void receiveData();
-// turn a led on depending on the tension received
-void manageTension(uint8_t tension);
+// ESP32 intercommunication functions 
+void setSpeed(int speed);             // set the car's speed
+void setSteering(int angle);          // set the angle of the servo
+void receiveData();                   // receive data from the serial
+void manageTension(uint8_t tension);  // turn a led on depending on the tension received
 
 // LIDAR management variables
+uint16_t getIndex(float angle);           // get the index in the distances array for an angle given
+uint16_t readDistance(uint16_t angle);    // Angle from 0 to 359
+void LidarTaskCode(void * pvParameters);  // Create code for the task which manages the LIDAR
 
-// get the index in the distances array for an angle given
-uint16_t getIndex(float angle);
-// Angle from 0 to 359
-uint16_t readDistance(uint16_t angle);
-// Create code for the task which manages the LIDAR
-void LidarTaskCode(void * pvParameters);
-
-// send a piece of data to the telemetry esp32
+// Send a piece of data to the telemetry esp32
 void enviarDato(byte* pointer, int8_t size);
 void sendPacket(byte packetType, byte* packet);
 
-// functions for the management of the car's position
-
-void iteratePositionPID();  // invoke an iteration of the pid controller for the position
-void turn();            // turn
+// Functions for the management of the car's position
+void iteratePositionPID();    // invoke an iteration of the pid controller for the position
+void turn();                  // turn
 void setXcoord(uint16_t i);   // set the coordinate x axis
 void setYcoord(uint16_t f);   // set the coordinate y axis
-void decideTurn();  // detect the sense of turn
-void checkTurn();   // check wether you have to turn or not
+void decideTurn();            // detect the sense of turn
+void checkTurn();             // check wether you have to turn or not
+
+
+
+// ***** SETUP CODE *****
+// This code will only run once, just after turning on the ESP32
 
 void setup() {
-  // put your setup code here, to run once:
-
+  
+  //THIS IS ONLY USED FOR DEBUG PURPOSES AND NOT DURING THE MATCH
   #if ENABLE_TELEMETRY == true
-  // begin telemetry serial
-  teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+    // Begin telemetry serial
+    teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
   #else
-  // begin serial
-  Serial.begin(115200);
+    // Begin serial
+    Serial.begin(115200);
   #endif
-  // begin esp32 intercommunication serial
+
+  // Begin ESP32 Master-Slave intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
-  // set all the pin modes
+  // Set all the pin modes
   setPinModes();
   digitalWrite(pinBuzzer, HIGH);
+
+  // WIFI IS NOT USED
   #if ENABLE_WIFI == true
-    
   #endif
-  // configure the mpu
+
+  // Configure the IMU MPU
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
   mimpu.WorkOffset();
 
   delay(500);
 
-  // begin the lidar
+  // Begin the lidar and check its health
   lidar.begin(lidarSerial);
   rplidar_response_device_info_t info;
   while (!IS_OK(lidar.getDeviceInfo(info, 100))) delay(500);
   rplidar_response_device_health_t health;
   lidar.getHealth(health);
   Serial.println("info: " + String(health.status) +", " + String(health.error_code));
-  // detected...
   lidar.startScan();
 
   esp_task_wdt_deinit();
-  // Asign lidar Task to core 0
+
+  // Asign LIDAR Task to core 0
   xTaskCreatePinnedToCore(
     LidarTaskCode,
     "Task1",
@@ -208,18 +225,20 @@ void setup() {
     10,
     &Task1,
     0);
+
   delay(500);
   digitalWrite(pinBuzzer, LOW);
 
-  // start lidar's motor rotating at max allowed speed
+  // Start LIDAR's motor rotating at max allowed speed
   analogWrite(pinLIDAR_motor, 255);
   delay(500);
 
-  // wait until y coordinate is calculated
+  // Wait until y coordinate is calculated
   while (readDistance(0) == 0) delay(100);
   setYcoord(readDistance(0));
   delay(500);
 
+  // Waits until the start button is pressed
   #if PRACTICE_MODE == false
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
@@ -232,48 +251,52 @@ void setup() {
   #endif
   delay(1000);
 
-  // start driving (set a speed to the car and initialize the mpu)
+  // Starts driving (set a speed to the car and initialize the IMU MPU)
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
 
-  // receive data from the intercommunication serial
+
+// ***** LOOP CODE *****
+// This code runs repeatedly
+
+void loop() {
+
+  // Receive data from the intercommunication serial
   while (commSerial.available())
   {
     receiveData();
   }
 
-  // update mpu's angle
+  // Update IMU MPU's angle
   mimpu.UpdateAngle();
 
-  // repeat position functions every 32ms
+  // Repeat position functions every 32ms
   static uint32_t prev_ms_position = millis();
   if (millis() > prev_ms_position) {
     if (encoderMeasurement != prev_encoderMeasurement) {
-      // calculate the increment in position and add it
+      // Calculate the increment in position and add it
       double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       prev_encoderMeasurement = encoderMeasurement;
-      xPosition -= dx; // x -> + derecha - izquierda
+      xPosition -= dx; // x -> + right - left
       yPosition += dy;
       iteratePositionPID();
     }
     prev_ms_position = millis() + 32;
   }
 
+  // Send telemetry every 100ms, ONLY USED FOR DEBUG PURPOSES AND NOT DURING THE MATCH
   #if ENABLE_TELEMETRY == true
-  // send telemetry every 100ms
   static uint32_t prev_ms_tele = millis();
   if (millis() > prev_ms_tele+500)
   {
-    /*FORMATO TELEMETRIA
-    |inicioTX            |TipoPaquete|Datos|
+    /*Telemetry format
+    |StartTX             |PacketType |Data|
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
-   /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
+    // WE SEND PACKET TYPE 4 DISTANCES
     for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
@@ -299,7 +322,8 @@ void loop() {
         wi++;
     }
    
-    /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
+    // WE SEND PACKET TYPE 3 MEDIUM QUALITY
+    /*
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
@@ -310,31 +334,34 @@ void loop() {
         pi++;
     }*/
 
-    /*ENVIAMOS PAQUETE TIPO 5 INFORMACION GENERAL*/
+    // WE SEND PACKET TYPE 5 GENERAL INFORMATION
                 /*
-            --Posicion x 8 bytes
-            --Posición y 8 bytes
-            --Posición x Objetivo 8 bytes
-            --Posición y Objetivo 8 bytes
-            --Encoder 32 uint32
-            --Estado 8bits  uint
-            --batería 8bits uint
-            --Ángulo 16 float
-            --Angulo Objetivo 16 float
-            --Cámara firma1 Detectada 1 byte
-            --Cámara firma1 x 8 bits
-            --Cámara firma1 y 8 bits
-            --Cámara firma2 Detectada 1byte
-            --Cámara firma2 x 8bits
-            --Cámara firma2 y 8bits
+            -- X Position, 8 bytes
+            -- Y Position, 8 bytes
+            -- X Objective position, 8 bytes
+            -- Y Objective position, 8 bytes
+            -- Encoder, 32 uint32
+            -- State, 8 bits uint
+            -- Battery, 8 bits uint
+            -- Angle, 16 float
+            -- Objective angle, 16 float
+            -- Camera signature 1 detected, 1 byte
+            -- Camera signature 1 x, 8 bits
+            -- Camera signature 1 y, 8 bits
+            -- Camera signature 2 detected, 1 byte
+            -- Camera signature 2 x, 8 bits
+            -- Camera signature 2 y, 8 bits  
             
             |XXXX|YYYY|MMMM|NNNN|QQQQ|W|E|RRRR|TTTT|U|I|O|A|S|D
              0000 0000 0111 1111 1112 2 2 2222 2223 3 3 3 3 3 3
              1234 5678 9012 3456 7890 1 2 3456 7890 1 2 3 4 5 6
             */
-    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+    // We send the start header of the packet
+    for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
+
+    // We send the packet
     teleSerial.write(byte(06));
     unsigned long time = millis();
     long posXLong = long(xPosition);
@@ -361,14 +388,15 @@ void loop() {
   }
   #endif
 
-  // check turn every 50ms
+  // Check turn every 50ms
   static uint32_t prev_ms_turn = millis();
   if (millis() > prev_ms_turn) {
     checkTurn();
     prev_ms_turn = millis() + 50;
   }
 
-  // repeat direction pid iterations every 20ms
+  // Repeat direction PID iterations every 20ms
+  // ONLY GOD KNOWS WHAT IS HAPPENING HERE
   static uint32_t prev_ms_direction = millis();
   if (millis() > prev_ms_direction) {
     actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
@@ -381,10 +409,10 @@ void loop() {
     prev_ms_direction = millis() + 20;
   }
 
-  // state machine
+  // State machine depending of the position and situation of the robot during the match
   switch (estado)
   {
-  case e::Inicio:
+  case e::Inicio:   // Start position
     if (yPosition >= 1500) {
       digitalWrite(pinLED_rojo, HIGH);
       decideTurn();

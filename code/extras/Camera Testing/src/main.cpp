@@ -90,7 +90,12 @@ void printResult(){
     {
       maxHeight = blocksHeight[i];
       maxHeightIndex = blocksIndexNumber[i];
-    } 
+    }else if (((double)blocksHeight[i]/(double)blocksWidth[i]) > 0.3)
+    {
+      Serial.println("BARRERA");
+      return;
+    }
+    
   }
   
 

@@ -1,10 +1,18 @@
-/*
- * Motor.h - Library for controling an engine with Arduino Framework.
- *
- * Created by the Gamma Version Team, 2023
+/***************************************************
  * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
  * 
- */
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
+ * 
+****************************************************/
+
+/***************************************************
+ * 
+ * Motor.cpp - Library for controling an engine with Arduino Framework.
+ * 
+****************************************************/
+
 
 
 #ifndef Motor_h
