@@ -362,14 +362,15 @@ void loop() {
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
-    teleSerial.write(05);
-    long posXLong = xPosition;
-    long posYLong = yPosition;
-    long posXObjLong = objectivePosition;
+    teleSerial.write(byte(06));
+    unsigned long time = millis();
+    long posXLong = long(xPosition);
+    long posYLong = long(yPosition);
+    long posXObjLong = long(objectivePosition);
     long posYObjLong = (turnSense==-1)?1:(turnSense==1)?2:0;
-    long anguloLong = mimpu.GetAngle();
-    long anguloObjLong = objectiveDirection;
-    firma2X = giros;
+    long anguloLong = long(mimpu.GetAngle());
+    long anguloObjLong = long(objectiveDirection);
+    enviarDato((byte*)&time,sizeof(time));
     enviarDato((byte*)&posXLong,sizeof(posXLong));
     enviarDato((byte*)&posYLong,sizeof(posYLong));
     enviarDato((byte*)&posXObjLong,sizeof(posXObjLong));
@@ -382,7 +383,6 @@ void loop() {
     enviarDato((byte*)&tramo,sizeof(tramo));
     enviarDato((byte*)&distancia90,sizeof(distancia90));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
-    for (byte i=0; i<10; i++) teleSerial.write(byte(00));
     /*
     enviarDato((byte*)&firma1Detectada,sizeof(firma1Detectada));
     enviarDato((byte*)&firma1X,sizeof(firma1X));
