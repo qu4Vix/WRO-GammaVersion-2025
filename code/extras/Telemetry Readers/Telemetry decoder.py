@@ -164,8 +164,29 @@ def parse_packet(receivedBytes):
                 'firma2PosicionX': firma2PosicionX,
                 'firma2PosicionY': firma2PosicionY,
                 'arrayBloques': arrayBloques,
-                'tramo': tramo
                 '''
+        elif cabecera == 7:
+            #print("Cabecera 7: Camera ------------------")
+            i = 1
+            firma1Detectada = receivedBytes[i] == 1
+            i = 2
+            firma1PosicionX = receivedBytes[i]
+            i = 3
+            firma1PosicionY = receivedBytes[i]
+            i = 6
+            firma2Detectada = receivedBytes[i] == 1
+            i = 7
+            firma2PosicionX = receivedBytes[i]
+            i = 8
+            firma2PosicionY = receivedBytes[i]
+            return {
+                'firma1Detectada': firma1Detectada,
+                'firma1PosicionX': firma1PosicionX,
+                'firma1PosicionY': firma1PosicionY,
+                'firma2Detectada': firma2Detectada,
+                'firma2PosicionX': firma2PosicionX,
+                'firma2PosicionY': firma2PosicionY,
+            }
         else:
             print("Cabecera Desconocida")
             return ("Cabecera desconocida...........")
