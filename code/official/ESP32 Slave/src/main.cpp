@@ -78,11 +78,14 @@ void setup() {
 
   // Initializing code for the Serial, this is only used for debug and not during the match
   Serial.begin(115200);
-  Serial.println("Empezando");
+  Serial.println("Starting");
 
   // Initializing code for the  I2C, this is the connection to the camera
   Wire.begin(18,19);
   while(!Husky.begin(Wire)) delay(100);
+  if(Husky.begin(Wire)==1) Serial.println("HuskyLens connected");
+
+  Husky.writeAlgorithm(ALGORITHM_COLOR_RECOGNITION);
   
   // A function of the pinAssigments.h include
   setPinModes();
@@ -148,6 +151,7 @@ void loop() {
   #if ROUND_NUMBER == 2
   static uint32_t prev_ms_camera = millis();
   if (millis() > prev_ms_camera) {
+    Husky.requestBlocksLearned();
     calculateNearestBlockAndSendCamera();
     prev_ms_camera = millis() + 100;
   }
@@ -254,7 +258,7 @@ void calculateNearestBlockAndSendCamera (){
     blocksHeight[i] = fHusky.height;
     blocksWidth[i] = fHusky.width;
   }
-  
+
   // Now we search which block is the highest (closer to the camera). That block has to be taller than it is wide because otherwise it is probably a line, as lines will often be wider than they are tall.
   for (int i = 0; i < numberOfBlocks; i++)
   {
@@ -262,6 +266,7 @@ void calculateNearestBlockAndSendCamera (){
     {
       maxHeight = blocksHeight[i];
       maxHeightIndex = blocksIndexNumber[i];
+
     } 
   }
 
