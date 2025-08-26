@@ -396,7 +396,13 @@ void loop() {
     enviarDato((byte*)&firma2X,sizeof(firma2X));
     enviarDato((byte*)&firma2Y,sizeof(firma2Y));
     teleSerial.write(0x00);teleSerial.write(0x00);
-    //enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
+    
+    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(byte(01));
+    enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
+    teleSerial.write(0x00);teleSerial.write(0x00);
     
     prev_ms_tele = millis();
   }
