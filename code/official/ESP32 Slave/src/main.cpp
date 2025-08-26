@@ -45,7 +45,7 @@
 
 
 
-// ***** INITIALIZING VARIABLES, OBJECTS AND FUNCTIONS *****
+// ***** DECLARING VARIABLES, OBJECTS AND FUNCTIONS *****
 
 hw_timer_t* timerHandler;
 HardwareSerial commSerial(1);
