@@ -16,13 +16,15 @@ We can highlight as the main modification the redesign of the turning system to 
 	
 With these changes to the turning system we have implemented the **Ackerman's Steering Geometry**,this mechanism allows the turning wheels to take different paths when turning, since the turning radius of the inner wheel is smaller than that of the outer wheel, thus the angle of each turning wheel is different. This implementation allows for better turning, and with certain tweaks, we have minimized the required turning radius. This mechanism is actuated by a generic servo **DSM44 Servo**. It has the necessary torque and speed without being a problem in terms of power consumption. In the following images, we can see the nature of why this mechanism is necessary, a simplified version of how it works, and our design of the mechanism for our robot.
 
+| | |
+| ------------------------- | ------------------------- |
 | ![ ](./readme-photos/Ackerman's%20Steering%20Geometry%20diagram.png) | ![ ](./readme-photos/Ackerman's%20Steering%20Geometry%20in%20our%20robot.png) |
 
 More information about Ackerman's Steering Geometry can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Ackermann_steering_geometry).
 
 According to competition regulations, only one motor can drive a drive axle. Therefore, in our case, we made the rear axle the drive axle to which the motor is connected. This is how the original kit was made. We also used the differential that came with the kit for proper operation. The differential allows the rear wheels to travel different distances, since the arc that each wheel travels is different when turning, as the turning radius of each wheel also varies. For our robot, we also used the motor that came with the kit; you can see the image below.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/Placeholder%20F.001.png?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Placeholder%20F.001.png?raw=true" width="500">
 
 This motor provides us with the necessary torque to comfortably move the robot without it getting stuck. In our case, we're not trying to get the robot to go at maximum speed, so the robot's overall speed wasn't a relevant factor when choosing the motor.
 
@@ -38,7 +40,7 @@ Thirdly, at the rear we can see from above the **PCB**, which houses much of our
 
 Finally, at the rear, the metal mast that raises and holds our **camera** is held on a 3D-designed base to the vehicle.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/Placeholder%20F.002.png?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Placeholder%20F.002.png?raw=true" width="500">
 
 ## ELECTRONICS AND SENSORS
 
@@ -67,11 +69,11 @@ To bring our autonomous car project to fruition, we opted for the ESP-32 microco
 
 3. Sensor and Actuator Compatibility: The ESP-32's adaptability extends to sensor and actuator integration. With its multitude of I/O (input/output) pins and versatile interface options, we effortlessly connected and controlled various sensors, including the IMU and LiDAR, as well as the steering servos.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/ESP32%20Pin%20out.jpg?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/ESP32%20Pin%20out.jpg?raw=true" width="600">
 
 We integrated two ESP32s into our robot, as it was necessary due to the large amount of information they must analyze from all the sensors and the decisions they must make. For this purpose, we call one ESP32 "Slave," to which several sensors are connected. After analyzing this information, it sends it to another ESP32, which we call "Master." Other sensors are connected to this ESP32, and it is responsible for executing all the movement commands.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/ESP32%20Diagram%20of%20connections.jpg?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/ESP32%20Diagram%20of%20connections.jpg?raw=true" width="500">
 
 #### HuskyLens (Camera)
 
@@ -79,7 +81,7 @@ The HuskyLens camera was our choice because it gives us a larger horizontal fiel
 	
 The camera's sole function is to detect the colored blocks, indicate their position on the camera, and indicate their color. We train it for all of this before the competition.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/HuskyLens%20camera.jpg?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/HuskyLens%20camera.jpg?raw=true" width="500">
 
 #### RPLiDAR A1 M8 (LiDAR)
 
@@ -95,7 +97,7 @@ Rather than relying on traditional ultrasonic sensors for obstacle detection, we
 
 During the match the LiDAR technology is used to establish the initial position of the robot and the direction of the game. In this way the random initial conditions do not affect the outcome of the match.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/RPLiDAR%20A1%20M8%20image.jpg?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/RPLiDAR%20A1%20M8%20image.jpg?raw=true" width="500">
 
 #### MPU 9250 and Pololu Magnetic Encoder (IMU and encoder)
 
@@ -129,9 +131,9 @@ To seamlessly connect and control all the components of our autonomous car, we d
 
 Our custom PCB design allowed for cleaner wiring, reduced interference, and enhanced reliability. It simplified the process of connecting and configuring various sensors and actuators, enabling smoother integration and troubleshooting during the development phase.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/PCB%20Design.jpg?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/PCB%20Design.jpg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/other%20photos/Schematic%20PCB.png?raw=true">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Schematic%20PCB.png?raw=true" width="800">
 
 ## STRATEGY AND OPERATION OF THE CODE
 
@@ -159,6 +161,8 @@ In the Open Challenge, the robot must complete three laps of the circuit from a 
 	
 With the information from the previous paragraph in mind, our strategy is based on correctly determining our position on the board and then completing the circuit from there. Our robot has no knowledge of the size of the central square, as it simply navigates an imaginary circuit that is larger than the maximum limits of the central square, as we can see in the images.
 
+| | |
+| ------------------------- | ------------------------- |
 | ![ ](./readme-photos/Diagram%201%20Open%20Challenge.png) | ![ ](./readme-photos/Diagram%202%20Open%20Challenge.png) |
 
 ### Obstacle Challenge Strategy
