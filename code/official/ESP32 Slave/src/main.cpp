@@ -210,8 +210,13 @@ void receiveData() {
     uint8_t _velocity;
     commSerial.readBytes(&_velocity, 1);
     uint8_t _speed = (_velocity >> 1)<<1;
-    int speed = (_velocity - _speed) ? -_speed : _speed;
-    objectiveSpeed = speed;
+    if (_velocity & 0x01) {
+      objectiveSpeed = -_speed; // if the LSB is true, the speed is negative
+      miencoder.SetMotionDirection(false); // set driving direction in the encoder to backwards (not forward)
+    } else {
+      objectiveSpeed = _speed; // otherwise it is positive
+      miencoder.SetMotionDirection(true); // set driving direction in the encoder to forwards
+    }
   } else 
   if (firstByte == 2) // This reads the angle information
   {

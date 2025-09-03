@@ -29,16 +29,21 @@ void Encoder::Attach(byte mode) {
         mode == CHANGE;
     }
     pinMode(_pinEncoder, INPUT);
-    attachInterrupt(digitalPinToInterrupt(_pinEncoder), EncoderISR, mode);
+    attachInterrupt(digitalPinToInterrupt(_pinEncoder), _encoderISR, mode);
 }
 
-void Encoder::EncoderISR() {
-    _sEncoder->UpdateEncoder();
+void Encoder::_encoderISR() {
+    _sEncoder->_updateEncoder();
 }
 
-void Encoder::UpdateEncoder() {
-    _encoder++;
-    _encoderTotal++;
+void Encoder::_updateEncoder() {
+    if (_forward) {
+        _encoder++;
+        _encoderTotal++;
+    } else {
+        _encoder--;
+        _encoderTotal--;
+    }
 }
 
 long Encoder::GetEncoder() {
@@ -49,4 +54,8 @@ long Encoder::GetEncoderInterval() {
     long _encoderInterval = _encoder;
     _encoder = 0;
     return _encoderInterval;
+}
+
+void Encoder::SetMotionDirection(bool forward) {
+    _forward = forward;
 }

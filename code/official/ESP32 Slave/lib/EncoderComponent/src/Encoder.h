@@ -26,22 +26,16 @@ class Encoder{
     void Attach(byte mode);
     long GetEncoder();
     long GetEncoderInterval();
+    void SetMotionDirection(bool forward);
 
     private:
     static Encoder* _sEncoder;
-    static void EncoderISR();
-    void UpdateEncoder();
+    static void _encoderISR();
+    void _updateEncoder();
     byte _pinEncoder;
     volatile long _encoder;
-    volatile long _encoderTotal;
-};
-
-class Speedometer{
-    public:
-    Speedometer();
-    
-    private:
-    int _speed;
+    volatile long _encoderTotal = 2048; // Inicializado a un numero grande para que nunca sea negativo
+    bool _forward;
 };
 
 #endif

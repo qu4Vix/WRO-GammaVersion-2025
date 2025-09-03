@@ -83,11 +83,12 @@ uint8_t estado = e::Inicio;
 // Journey variables
 uint8_t giros = 0;
 uint8_t tramo = 0;
-int8_t turnSense = 0;
+int8_t turnSense = 0;       // We don't know it at the beginning
+int8_t motionDirection = 0; // The car doesn't move at the beginning
 
 // Encoder variables
-uint32_t encoderMeasurement;
-uint32_t prev_encoderMeasurement;
+int32_t encoderMeasurement;
+int32_t prev_encoderMeasurement;
 
 // Lidar measurement variables
 uint16_t distances[360];
@@ -237,6 +238,13 @@ void setup() {
   while (readDistance(0) == 0) delay(100);
   setYcoord(readDistance(0));
   delay(500);
+  
+  // Receive data from the intercommunication serial
+  while (commSerial.available())
+  {
+    receiveData();
+  }
+  prev_encoderMeasurement = encoderMeasurement;
 
   // Waits until the start button is pressed
   #if PRACTICE_MODE == false
@@ -290,14 +298,14 @@ void loop() {
   // Send telemetry every 100ms, ONLY USED FOR DEBUG PURPOSES AND NOT DURING THE MATCH
   #if ENABLE_TELEMETRY == true
   static uint32_t prev_ms_tele = millis();
-  if (millis() > prev_ms_tele+500)
+  if (millis() > prev_ms_tele + 100)
   {
     /*Telemetry format
     |StartTX             |PacketType |Data|
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
     // WE SEND PACKET TYPE 4 DISTANCES
-    for(int i = 0; i<4; i++){
+    /*for (int i = 0; i<4; i++) {
       teleSerial.write(0xAA);
     }
     teleSerial.write(04);
@@ -309,7 +317,7 @@ void loop() {
         zi++;
     }
 
-    for(int i = 0; i<4; i++){
+    for (int i = 0; i<4; i++) {
       teleSerial.write(0xAA);
     }
     teleSerial.write(05);
@@ -320,11 +328,11 @@ void loop() {
         teleSerial.write(distanceAge>>8);
         teleSerial.write(distanceAge&0x00ff);
         wi++;
-    }
+    }*/
    
     // WE SEND PACKET TYPE 3 MEDIUM QUALITY
     /*
-    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+    for (int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
     teleSerial.write(03);
@@ -357,7 +365,7 @@ void loop() {
              1234 5678 9012 3456 7890 1 2 3456 7890 1 2 3 4 5 6
             */
     // We send the start header of the packet
-    for(int i = 0; i<4; i++){
+    for (int i = 0; i<4; i++) {
       teleSerial.write(0xAA);
     }
 
@@ -402,7 +410,7 @@ void loop() {
     actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
     int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
     if(_setAngle != prev_setAngle) {
-      setSteering(_setAngle);
+      setSteering(_setAngle*motionDirection);
       prev_setAngle = _setAngle;
     }
     prev_directionError = actual_directionError;
@@ -458,7 +466,13 @@ int directionError(int bearing, int target) {
 
 void setSpeed(int speed) {
   speed = constrain(speed, -100, 100);
-  uint8_t _speed = (abs(speed) << 1) | ((speed >= 0) ? 0 : 1);
+  uint8_t _speed = abs(speed) << 1;
+  if (speed >= 0) {
+    motionDirection = 1;
+  } else {
+    motionDirection = -1;
+    _speed = _speed | 0b01;
+  }
   commSerial.write(1);
   commSerial.write(_speed);
 }
@@ -612,7 +626,7 @@ void iteratePositionPID() {
   } else {
     positionError = directionError(yPosition, objectivePosition);
   }
-  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -90, 90);
+  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -90, 90) * motionDirection;
   if (fixInverted) objectiveDirection = -objectiveDirection;
   objectiveDirection += 90 * giros * turnSense;
 }

@@ -53,7 +53,7 @@ void Motor::SetPower(int power) {
 
 void Motor::SetSpeed(int actualSpeed, int targetSpeed) {
   _error = targetSpeed - actualSpeed;
-  _power = constrain(_power + _error * _kp + (_error - _lastError) * _kd, 0, 255);
+  _power = constrain(_power + _error * _kp + (_error - _lastError) * _kd, -255, 255);
   if (targetSpeed == 0) {
     SetPower(0);
   } else {
