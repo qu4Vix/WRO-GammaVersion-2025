@@ -41,6 +41,8 @@ int actual_directionError;
 int prev_directionError;
 float objectiveDirection;
 
+int8_t DireccionMovimiento = 1;
+
 // battery level variable
 uint8_t bateria;
 
@@ -67,7 +69,10 @@ enum e {
   Prueba,
   DesAparcar,
   Volver,
-  Reinicio
+  Reinicio,
+  Posicionamiento,
+  EntradaFase1,
+  EntradaFase2
 };
 uint8_t estado = e::DesAparcar;
 
@@ -121,7 +126,7 @@ double yPosition = 0;
 #define positionKP 0.2  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
 #define positonKPmagico 100
-float KPActual = positonKPmagico;
+float KPActual = positionKP;
 int objectivePosition = 0;
 float positionError;
 float prev_positionError;
@@ -150,7 +155,9 @@ uint16_t blockPaths[2][4][3] =
     {500, trackCenter - trackLateral, trackCenter + trackLateral}
   }
 };
-uint16_t PosicionXDependiente[2] = {2600, 400};
+
+uint16_t PosicionXDependiente[2] = {2650, 400};
+
 uint8_t lastBlock;
 bool senseDirectionChanged = false;
 bool bloqueEnMedio = false;
@@ -268,6 +275,14 @@ void setup() {
   {
     decideTurn();
   }
+
+  // receive data from the intercommunication serial
+  while (commSerial.available())
+  {
+    receiveData();
+  }
+  prev_encoderMeasurement = encoderMeasurement;
+  
   digitalWrite(pinLED_verde, LOW);
   if (yPosition >= 1500) bloqueEnMedio = true;
 
@@ -326,7 +341,7 @@ void loop() {
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
-    for(int i = 0; i<4; i++){
+    /*for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
     teleSerial.write(04);
@@ -336,7 +351,7 @@ void loop() {
         teleSerial.write(distances[zi]>>8);
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
-    }
+    }*/
     /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
@@ -392,7 +407,7 @@ void loop() {
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
     enviarDato((byte*)&tramo,sizeof(tramo));
-    enviarDato((byte*)&distancia90,sizeof(distancia90));
+    enviarDato((byte*)&distancia0,sizeof(distancia0));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
     
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
@@ -422,8 +437,8 @@ void loop() {
   // check turn every 50ms
   static uint32_t prev_ms_turn = millis();
   if (millis() > prev_ms_turn) {
-    if (totalGiros == 8) changeDrivingDirection();
-    checkTurn();
+    /*if (totalGiros == 8) changeDrivingDirection();
+    checkTurn();*/
     prev_ms_turn = millis() + 50;
   }
 
@@ -433,7 +448,7 @@ void loop() {
     actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
     int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
     if(_setAngle != prev_setAngle) {
-      setSteering(_setAngle);
+      setSteering(_setAngle*DireccionMovimiento);
       prev_setAngle = _setAngle;
     }
     prev_directionError = actual_directionError;
@@ -463,7 +478,8 @@ void loop() {
 
 
   case e::DesAparcar:
-    if (yPosition >= posYmagica + 350)
+    //Ajustar el avance para que no se pase del bloque y tal...
+    if (yPosition >= posYmagica + 300)
     {
       setSpeed(0);
       estado = e::Volver;
@@ -486,6 +502,29 @@ void loop() {
       estado = e::Inicio;
     }
   break;
+
+  case e::Posicionamiento:
+    objectivePosition = PosicionXDependiente[turnClockWise];
+    setSpeed(StartSpeed);
+    estado = e::EntradaFase1;
+  break;
+  case e::EntradaFase1:
+    if (yPosition >= posYmagica + 350)
+    {
+      setSpeed(0);
+      KPActual = positonKPmagico;
+      objectivePosition = abs(120-mapSize*!turnClockWise);
+      setSpeed(-StartSpeed);
+      estado = e::EntradaFase2;
+    }
+  break;
+  case e::EntradaFase2:
+    if (yPosition <= 1530-(500*turnClockWise))
+    {
+      setSpeed(0);
+
+    }
+  break;
   }
 }
 
@@ -501,7 +540,9 @@ float directionError(double bearing, int target) {
 
 void setSpeed(int speed) {
   speed = constrain(speed, -100, 100);
-  uint8_t _speed = (abs(speed) << 1) | ((speed >= 0) ? 0 : 1);
+  uint8_t _speed = abs(speed) << 1;
+  if(speed>=0){DireccionMovimiento=1;}
+  else{DireccionMovimiento=-1; _speed=_speed|1;}
   commSerial.write(1);
   commSerial.write(_speed);
 }
