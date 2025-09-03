@@ -122,7 +122,7 @@ bool fixInverted = true;
 
 // trajectory management variables
 
-uint16_t tramos[2][8] ={
+uint16_t tramos[2][8] = {
   {500,500,2500,2500,2500,2500,500,500},
   {mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, trackCenter, trackCenter, trackCenter, trackCenter}
 };
@@ -130,13 +130,13 @@ uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 uint16_t blockPaths[2][4][3] =
 {
   { // anticlockwise
-    {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral}, // Left, right
+    {2500, mapSize - 380, mapSize - trackCenter - trackLateral}, // Left, right
     {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral}
   },
   { // clockwise
-    {500, trackCenter - trackLateral, trackCenter + trackLateral},
+    {500, 380, trackCenter + trackLateral},
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // Left, right
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral},
     {500, trackCenter - trackLateral, trackCenter + trackLateral}
@@ -411,7 +411,7 @@ void loop() {
   // check turn every 50ms
   static uint32_t prev_ms_turn = millis();
   if (millis() > prev_ms_turn) {
-    if (totalGiros == 8) changeDrivingDirection();
+    //if (totalGiros == 8) changeDrivingDirection();
     checkTurn();
     prev_ms_turn = millis() + 50;
   }
@@ -452,10 +452,10 @@ void loop() {
     if (totalGiros == 12) {
       estado = e::Final;
     }
-    if (totalGiros == 4) setSpeed(CruisiereSpeed);
+    if (totalGiros == 6) setSpeed(CruisiereSpeed);
   break;
   case e::Final:
-    if (yPosition >= 1200) {
+    if (yPosition >= 1150) {
       setSpeed(0);
     }
   break;

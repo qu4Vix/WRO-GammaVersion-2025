@@ -11,7 +11,7 @@ HardwareSerial SerialTelem(1);
 void connectToWiFi(const char * ssid, const char * pwd);
 void WiFiEvent(WiFiEvent_t event);
 
-const char * udpAddress = "192.168.1.17"; //COMPUTER IP
+const char * udpAddress = "192.168.1.23"; //COMPUTER IP
 const int udpPort = 5007;
 
 //Are we currently connected?
@@ -182,11 +182,11 @@ void receiveData() {
     case RXState::recibiendoTipoPaquete :
       if (rx < (sizeof(DataLenth)/sizeof(DataLenth[0]))) {    //Por ahora unicamente tenemos 5 tipos de paquetes
         posBufferTelem = 0;
-        TeleBuffer[posBufferTelem] = rx;      //Guardamos el tipo de paquete en el buffer para que esté al inicio de la trama udp que vamos a enviar
+        TeleBuffer[posBufferTelem] = rx;       //Guardamos el tipo de paquete en el buffer para que esté al inicio de la trama udp que vamos a enviar
         posBufferTelem++;
         datosPendientesDeRecibir = DataLenth[rx]; //Dependiendo del tipo de paquete, tendremos que recibir una cantidad de datos
-        rxState = RXState::recibiendoDatos;   //Siguiente estado
-      } else {    //Hemos recibido un tipo de paquete no reconocido, y no sabremos el tamaño, por lo que lo ignoraremos
+        rxState = RXState::recibiendoDatos;    //Siguiente estado
+      } else {                                 //Hemos recibido un tipo de paquete no reconocido, y no sabremos el tamaño, por lo que lo ignoraremos
         rxState = RXState::idle;
       }    
     break;
@@ -194,11 +194,11 @@ void receiveData() {
       datosPendientesDeRecibir--;
       TeleBuffer[posBufferTelem] = rx;
       posBufferTelem++;
-      if (datosPendientesDeRecibir == 0) {    //Ya hemos recibido todos los datos
-        udp.beginPacket(udpAddress,udpPort);//Enviamos los datos por UDP
-        udp.write(TeleBuffer, posBufferTelem);  //El tamaño coincide con la posicion en la que estamos en el TeleBuffer
+      if (datosPendientesDeRecibir == 0) {      // Ya hemos recibido todos los datos
+        udp.beginPacket(udpAddress,udpPort);    // Enviamos los datos por UDP
+        udp.write(TeleBuffer, posBufferTelem);  // El tamaño coincide con la posicion en la que estamos en el TeleBuffer
         udp.endPacket();
-        rxState = RXState::idle;            //Volvemos al estado inicial
+        rxState = RXState::idle;                // Volvemos al estado inicial
       }
     break;
   }
