@@ -24,7 +24,13 @@ def parse_packet(receivedBytes):
     print("receivedBytes len =", len(receivedBytes))
     cabecera = receivedBytes[0]
     try:
-        if cabecera == 3:
+        if cabecera == 0:
+            return receivedBytes
+        elif cabecera == 1:
+            return receivedBytes
+        elif cabecera == 2:
+            return receivedBytes
+        elif cabecera == 3:
             #print("Cabecera 3: Lidar Calidad ------------------")
             LidarCalidad = [receivedBytes[i] for i in range(1, 361)]
             return {'LidarCalidad': LidarCalidad}
@@ -118,27 +124,6 @@ def parse_packet(receivedBytes):
             i = 38
             distancia270 = (receivedBytes[i] << 8) | receivedBytes[i+1]
             
-            '''
-            i = 31
-            firma1Detectada = receivedBytes[i] == 1
-            i = 32
-            firma1PosicionX = (receivedBytes[i-1] << 8) | receivedBytes[i]
-            i = 33
-            firma1PosicionY = receivedBytes[i]
-            i = 34
-            firma2Detectada = receivedBytes[i] == 1
-            i = 35
-            firma2PosicionX = (receivedBytes[i-2] << 8) | receivedBytes[i-1]
-            i = 36
-            firma2PosicionY = receivedBytes[i]
-            # arrayTramo
-            arrayBloques = [0]*8
-            indice = 7
-            for j in range(37, 45):
-                arrayBloques[indice] = receivedBytes[j]
-                indice -= 1
-            tramo = receivedBytes[45]
-            '''
             print("Si,si.................")
             
             return {
@@ -150,21 +135,12 @@ def parse_packet(receivedBytes):
                 'Encoder': Encoder,
                 'Estado': Estado,
                 'Bateria': Bateria,
-                'angulo': angulo,
-                'anguloObjetivo': anguloObjetivo,
-                'tramo':tramo,
-                'distancia90':distancia90,
-                'distancia270':distancia270,
+                'Angulo': angulo,
+                'AnguloObjetivo': anguloObjetivo,
+                'Tramo': tramo,
+                'Distancia90':distancia90,
+                'Distancia270':distancia270,
             }
-            '''
-                'firma1Detectada': firma1Detectada,
-                'firma1PosicionX': firma1PosicionX,
-                'firma1PosicionY': firma1PosicionY,
-                'firma2Detectada': firma2Detectada,
-                'firma2PosicionX': firma2PosicionX,
-                'firma2PosicionY': firma2PosicionY,
-                'arrayBloques': arrayBloques,
-                '''
         elif cabecera == 7:
             #print("Cabecera 7: Camera ------------------")
             i = 1
