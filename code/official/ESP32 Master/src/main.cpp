@@ -238,16 +238,16 @@ void setup() {
   while (readDistance(0) == 0) delay(100);
   setYcoord(readDistance(0));
   delay(500);
-  
+
+  #if PRACTICE_MODE == true
   // Receive data from the intercommunication serial
   while (commSerial.available())
   {
     receiveData();
   }
   prev_encoderMeasurement = encoderMeasurement;
-
+  #else
   // Waits until the start button is pressed
-  #if PRACTICE_MODE == false
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
@@ -255,6 +255,7 @@ void setup() {
       receiveData();
     }
   }
+  prev_encoderMeasurement = encoderMeasurement;
   digitalWrite(pinLED_verde, LOW);
   #endif
   delay(1000);

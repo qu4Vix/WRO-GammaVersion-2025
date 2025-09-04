@@ -103,8 +103,8 @@ bool turnClockWise;
 
 // encoder variables
 
-uint32_t encoderMeasurement;
-uint32_t prev_encoderMeasurement;
+int32_t encoderMeasurement;
+int32_t prev_encoderMeasurement;
 
 // lidar measurement variables
 
@@ -541,8 +541,8 @@ float directionError(double bearing, int target) {
 void setSpeed(int speed) {
   speed = constrain(speed, -100, 100);
   uint8_t _speed = abs(speed) << 1;
-  if(speed>=0){DireccionMovimiento=1;}
-  else{DireccionMovimiento=-1; _speed=_speed|1;}
+  if (speed >= 0) DireccionMovimiento=1;
+  else {DireccionMovimiento=-1; _speed=_speed | 0x01;}
   commSerial.write(1);
   commSerial.write(_speed);
 }
@@ -705,7 +705,7 @@ void iteratePositionPID() {
   } else {
     positionError = directionError(yPosition, objectivePosition);
   }
-  objectiveDirection = constrain(KPActual * positionError + positionKD * (positionError - prev_positionError), -90, 90);
+  objectiveDirection = constrain(KPActual * positionError + positionKD * (positionError - prev_positionError), -90, 90) * DireccionMovimiento;
   if (fixInverted) objectiveDirection = -objectiveDirection;
   objectiveDirection += 90 * giros * turnSense;
 }

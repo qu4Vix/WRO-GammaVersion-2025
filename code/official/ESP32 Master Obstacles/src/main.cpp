@@ -90,6 +90,8 @@ uint8_t tramo = 1;
 int8_t turnSense = 0;
 // whether you have to turn clockwise or not
 bool turnClockWise;
+// whether we are moving forwards (+1) or backwards (-1), in order to account for corrections in the PID. We initialize it at 0 (not moving)
+int8_t motionDirection = 0;
 
 // encoder variables
 
@@ -260,8 +262,16 @@ void setup() {
   setYcoord(readDistance(0));
   digitalWrite(pinLED_verde, LOW);
   if (yPosition >= 1500) bloqueEnMedio = true;
-
-  #if PRACTICE_MODE == false
+  
+  #if PRACTICE_MODE == true
+  // Receive data from the intercommunication serial
+  while (commSerial.available())
+  {
+    receiveData();
+  }
+  prev_encoderMeasurement = encoderMeasurement;
+  #else
+  // Waits until the start button is pressed
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
@@ -269,6 +279,7 @@ void setup() {
       receiveData();
     }
   }
+  prev_encoderMeasurement = encoderMeasurement;
   digitalWrite(pinLED_verde, LOW);
   #endif
   delay(500);
@@ -422,7 +433,7 @@ void loop() {
     actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
     int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
     if(_setAngle != prev_setAngle) {
-      setSteering(_setAngle);
+      setSteering(_setAngle * motionDirection);
       prev_setAngle = _setAngle;
     }
     prev_directionError = actual_directionError;
@@ -474,7 +485,13 @@ float directionError(double bearing, int target) {
 
 void setSpeed(int speed) {
   speed = constrain(speed, -100, 100);
-  uint8_t _speed = (abs(speed) << 1) | ((speed >= 0) ? 0 : 1);
+  uint8_t _speed = abs(speed) << 1;
+  if (speed >= 0) {
+    motionDirection = 1;
+  } else {
+    motionDirection = -1;
+    _speed = _speed | 0b01;
+  }
   commSerial.write(1);
   commSerial.write(_speed);
 }
@@ -637,7 +654,7 @@ void iteratePositionPID() {
   } else {
     positionError = directionError(yPosition, objectivePosition);
   }
-  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -90, 90);
+  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -90, 90) * motionDirection;
   if (fixInverted) objectiveDirection = -objectiveDirection;
   objectiveDirection += 90 * giros * turnSense;
 }
