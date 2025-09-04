@@ -74,7 +74,7 @@ enum e {
   EntradaFase1,
   EntradaFase2
 };
-uint8_t estado = e::DesAparcar;
+uint8_t estado = e::Posicionamiento;
 
 // track constants
 
@@ -121,12 +121,14 @@ double xPosition = 0;
 // y position of the car (increases upwards)
 double yPosition = 0;
 
+double posicionXinicio;
+
 // position PID controller variables
 
 #define positionKP 0.2  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
-#define positonKPmagico 100
-float KPActual = positionKP;
+#define positonKPmagico 6  //Ajustar para que haga las maniobras bien, y todo el lio...
+float KPActual = positonKPmagico;
 int objectivePosition = 0;
 float positionError;
 float prev_positionError;
@@ -155,8 +157,6 @@ uint16_t blockPaths[2][4][3] =
     {500, trackCenter - trackLateral, trackCenter + trackLateral}
   }
 };
-
-uint16_t PosicionXDependiente[2] = {2650, 400};
 
 uint8_t lastBlock;
 bool senseDirectionChanged = false;
@@ -271,10 +271,13 @@ void setup() {
   // wait until y coordinate is calculated
   digitalWrite(pinLED_verde, HIGH);
   yPosition = posYmagica;
-  while (turnSense==0)
+  //-------------------------------------------------------------------------
+  /*while (turnSense==0)
   {
     decideTurn();
-  }
+  }*/
+
+  posicionXinicio = xPosition;
 
   // receive data from the intercommunication serial
   while (commSerial.available())
@@ -299,7 +302,14 @@ void setup() {
   delay(500);
 
   // start driving (set a speed to the car and initialize the mpu)
-  objectivePosition = PosicionXDependiente[turnClockWise];
+  objectivePosition = 2500-2000*turnClockWise;
+//-------------------------------------------------------------------------------------------------
+  xPosition = 2500;
+  yPosition = 1000;
+  turnSense = 1;
+  turnClockWise = false;
+  posicionXinicio = 2880;
+
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
 }
@@ -410,6 +420,7 @@ void loop() {
     enviarDato((byte*)&distancia0,sizeof(distancia0));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
     
+    //Telemetria de la camara descomentar para ver ese tipo de cosas...--------------------------------------------------------------
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
@@ -437,8 +448,8 @@ void loop() {
   // check turn every 50ms
   static uint32_t prev_ms_turn = millis();
   if (millis() > prev_ms_turn) {
-    /*if (totalGiros == 8) changeDrivingDirection();
-    checkTurn();*/
+      if (totalGiros == 8) changeDrivingDirection();
+      //checkTurn();
     prev_ms_turn = millis() + 50;
   }
 
@@ -479,9 +490,10 @@ void loop() {
 
   case e::DesAparcar:
     //Ajustar el avance para que no se pase del bloque y tal...
-    if (yPosition >= posYmagica + 300)
+    if (xPosition <= posicionXinicio - 150*turnSense)
     {
       setSpeed(0);
+      delay(10);
       estado = e::Volver;
     }
   break;
@@ -491,38 +503,31 @@ void loop() {
     {
       setYcoord(distancia0);
       KPActual = positionKP;
-      setSpeed(-StartSpeed);
-      estado = e::Reinicio;
-    }
-  break;
-  case e::Reinicio:
-    if (yPosition <= 1500-(500*turnClockWise))
-    {
-      setSpeed(0);
       estado = e::Inicio;
     }
   break;
 
   case e::Posicionamiento:
-    objectivePosition = PosicionXDependiente[turnClockWise];
+    objectivePosition = posicionXinicio - 200*turnSense;
+    KPActual = positionKP;
     setSpeed(StartSpeed);
     estado = e::EntradaFase1;
   break;
   case e::EntradaFase1:
-    if (yPosition >= posYmagica + 350)
+    if (yPosition >= 1950-950*turnClockWise)
     {
       setSpeed(0);
-      KPActual = positonKPmagico;
-      objectivePosition = abs(120-mapSize*!turnClockWise);
+      KPActual = positionKP;
+      delay(10);
+      objectivePosition = posicionXinicio;
       setSpeed(-StartSpeed);
       estado = e::EntradaFase2;
     }
   break;
   case e::EntradaFase2:
-    if (yPosition <= 1530-(500*turnClockWise))
+    if (yPosition <= 1615)
     {
       setSpeed(0);
-
     }
   break;
   }
