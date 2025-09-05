@@ -28,7 +28,7 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 #endif
 */
 // Speeds
-#define StartSpeed 2
+#define StartSpeed 3
 #define CruisiereSpeed 10
 #define NormalSpeed 5
 
@@ -72,9 +72,10 @@ enum e {
   Reinicio,
   Posicionamiento,
   EntradaFase1,
+  EntradaFase15,
   EntradaFase2
 };
-uint8_t estado = e::Posicionamiento;
+uint8_t estado = e::DesAparcar;
 
 // track constants
 
@@ -122,13 +123,17 @@ double xPosition = 0;
 double yPosition = 0;
 
 double posicionXinicio;
+double marcaPos;
 
 // position PID controller variables
 
 #define positionKP 0.2  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
-#define positonKPmagico 6  //Ajustar para que haga las maniobras bien, y todo el lio...
+#define positonKPmagico 6 
+#define positionKPaparcar 2.5
+#define positionKDaparcar 25 //Ajustar para que haga las maniobras bien, y todo el lio...
 float KPActual = positonKPmagico;
+float KDActual = positionKD;
 int objectivePosition = 0;
 float positionError;
 float prev_positionError;
@@ -302,13 +307,14 @@ void setup() {
   delay(500);
 
   // start driving (set a speed to the car and initialize the mpu)
-  objectivePosition = 2500-2000*turnClockWise;
+  //objectivePosition = 2500-2000*turnClockWise;
 //-------------------------------------------------------------------------------------------------
-  xPosition = 2500;
+  xPosition = 500;
   yPosition = 1000;
-  turnSense = 1;
-  turnClockWise = false;
-  posicionXinicio = 2880;
+  turnSense = -1;
+  turnClockWise = true;
+  posicionXinicio = 120;
+  estado = e::Posicionamiento;
 
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
@@ -490,7 +496,7 @@ void loop() {
 
   case e::DesAparcar:
     //Ajustar el avance para que no se pase del bloque y tal...
-    if (xPosition <= posicionXinicio - 150*turnSense)
+    if (xPosition*turnSense <= posicionXinicio*turnSense - 150)
     {
       setSpeed(0);
       delay(10);
@@ -508,24 +514,37 @@ void loop() {
   break;
 
   case e::Posicionamiento:
-    objectivePosition = posicionXinicio - 200*turnSense;
+    objectivePosition = posicionXinicio - 225*turnSense;
     KPActual = positionKP;
     setSpeed(StartSpeed);
     estado = e::EntradaFase1;
   break;
   case e::EntradaFase1:
-    if (yPosition >= 1950-950*turnClockWise)
+    if (yPosition >= 1850-450*turnClockWise)
     {
       setSpeed(0);
-      KPActual = positionKP;
-      delay(10);
-      objectivePosition = posicionXinicio;
+      KPActual = positionKPaparcar;
+      KDActual = positionKDaparcar;
+      delay(15);
       setSpeed(-StartSpeed);
+      objectivePosition = posicionXinicio;
+      estado = e::EntradaFase15;
+    }
+  break;
+  case e::EntradaFase15:
+    if (yPosition <= 1520-500*turnClockWise)
+    {
+      KPActual = positionKP;
+      KDActual = positionKD;
+      setSpeed(0);
+      delay(15);
+      marcaPos = yPosition;
+      setSpeed(StartSpeed);
       estado = e::EntradaFase2;
     }
   break;
   case e::EntradaFase2:
-    if (yPosition <= 1615)
+    if (yPosition >= marcaPos+25)
     {
       setSpeed(0);
     }
@@ -710,7 +729,7 @@ void iteratePositionPID() {
   } else {
     positionError = directionError(yPosition, objectivePosition);
   }
-  objectiveDirection = constrain(KPActual * positionError + positionKD * (positionError - prev_positionError), -90, 90) * DireccionMovimiento;
+  objectiveDirection = constrain(KPActual * positionError + KDActual * (positionError - prev_positionError), -90, 90) * DireccionMovimiento;
   if (fixInverted) objectiveDirection = -objectiveDirection;
   objectiveDirection += 90 * giros * turnSense;
 }
