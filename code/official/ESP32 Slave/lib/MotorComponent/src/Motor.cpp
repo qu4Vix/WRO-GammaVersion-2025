@@ -37,17 +37,24 @@ void Motor::Init() {
 void Motor::SetPower(int power) {
   // (_pinDir1, LOW) ; (_pinDir2, HIGH) -> Backwards
   // (_pinDir1, HIGH); (_pinDir2, LOW)  -> Forward
-  if (power >= 0) {
+  if (power > 0) {
     _forward = true;
+    digitalWrite(_pinEnable, HIGH);
     digitalWrite(_pinDir1, HIGH);
     digitalWrite(_pinDir2, LOW);
     analogWrite(_pinPWM, power);
   }
   else if (power < 0) {
     _forward = false;
+    digitalWrite(_pinEnable, HIGH);
     digitalWrite(_pinDir1, LOW);
     digitalWrite(_pinDir2, HIGH);
     analogWrite(_pinPWM, -power);
+  }
+  else if (power == 0) {
+    digitalWrite(_pinDir1, HIGH);
+    digitalWrite(_pinDir2, HIGH);
+    analogWrite(_pinPWM, 255);
   }
 }
 
