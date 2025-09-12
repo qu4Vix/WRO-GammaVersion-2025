@@ -187,8 +187,8 @@ Due to the limited vision of our camera, the robot must perform corrective maneu
 
 Demonstration videos of the car successfully completing both challenges. The links to each of them can be found in:
 
-* [Open Challenge [PLACHEHOLDER]](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
-* [Obstacle Challenge [PLACEHOLDER]](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+* [Open Challenge](https://youtu.be/jVDG6yYy9Xo)
+* [Obstacle Challenge](https://youtu.be/SR2mRw_vzmI)
 
 ## License
 
