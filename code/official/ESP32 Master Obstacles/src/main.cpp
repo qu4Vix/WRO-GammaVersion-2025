@@ -64,9 +64,16 @@ enum e {
   Inicio,
   Recto,
   Final,
+  Arrancar,
+  Reposicionar,
+  Reinicio, // Not necessary -------------------------------------------------------------------------------------------------
+  Posicionamiento,
+  EntradaFase1,
+  EntradaFase2,
+  EntradaFase3,
   Prueba
 };
-uint8_t estado = e::Inicio;
+uint8_t estado = e::Arrancar;
 
 // track constants
 
@@ -78,6 +85,11 @@ uint8_t estado = e::Inicio;
 #define trackLateral 300
 // distance to path on which the car should try to turn (mm)
 #define turnOffset 300
+
+// Car constants
+#define carWidth 150
+#define carLength 240
+#define lidarToImu 150
 
 // journey variables
 
@@ -92,18 +104,20 @@ int8_t turnSense = 0;
 bool turnClockWise;
 // whether we are moving forwards (+1) or backwards (-1), in order to account for corrections in the PID. We initialize it at 0 (not moving)
 int8_t motionDirection = 0;
+bool isParking = false;
 
 // encoder variables
 
-uint32_t encoderMeasurement;
-uint32_t prev_encoderMeasurement;
+int32_t encoderMeasurement;
+int32_t prev_encoderMeasurement;
 
 // lidar measurement variables
 
 uint16_t distances[360];
 static uint16_t distancesMillis[360];
-u_int16_t distancia90;
-u_int16_t distancia270;
+uint16_t distancia0;
+uint16_t distancia90;
+uint16_t distancia270;
 
 // car position on the map (origin at the bottom-left corner)
 
@@ -112,10 +126,20 @@ double xPosition = 0;
 // y position of the car (increases upwards)
 double yPosition = 0;
 
+#define posYmagica 1500 // value of initialization of the variable yPosition so that program starts normally, even though the yPos is properly obtained in state e::Volver
+
+double startXposition;
+double marcaPos;
+
 // position PID controller variables
 
 #define positionKP 0.2  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
+#define positonKPmagico 6 
+#define positionKPaparcar 5
+#define positionKDaparcar 12.5 //Ajustar para que haga las maniobras bien, y todo el lio...
+float KPActual = positonKPmagico;
+float KDActual = positionKD;
 int objectivePosition = 0;
 float positionError;
 float prev_positionError;
@@ -129,7 +153,7 @@ uint16_t tramos[2][8] = {
   {mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, trackCenter, trackCenter, trackCenter, trackCenter}
 };
 uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-uint16_t blockPaths[2][4][3] =
+const uint16_t blockPaths[2][4][3] =
 {
   { // anticlockwise
     {2500, mapSize - 380, mapSize - trackCenter - trackLateral}, // Left, right
@@ -254,14 +278,18 @@ void setup() {
   analogWrite(pinLIDAR_motor, 255);
   delay(500);
 
-  // wait until y coordinate is calculated
+  // initialize y position and wait until the turn sense is decided and the x coordinate is calculated
   digitalWrite(pinLED_rojo, HIGH);
-  while (readDistance(0) == 0);
+  yPosition = posYmagica;
+  while (turnSense==0)
+  {
+    decideTurn();
+  }
+  startXposition = xPosition;
   digitalWrite(pinLED_rojo, LOW);
-  digitalWrite(pinLED_verde, HIGH);
-  setYcoord(readDistance(0));
-  digitalWrite(pinLED_verde, LOW);
-  if (yPosition >= 1500) bloqueEnMedio = true;
+  
+  // handle this in case the car has to turn around in final lap --------------------------------------------------------------
+  //if (yPosition >= 1500) bloqueEnMedio = true;
   
   #if PRACTICE_MODE == true
   // Receive data from the intercommunication serial
@@ -269,9 +297,8 @@ void setup() {
   {
     receiveData();
   }
-  prev_encoderMeasurement = encoderMeasurement;
   #else
-  // Waits until the start button is pressed
+  // Waits until the start button is pressed while reading from the intercommunication serial
   digitalWrite(pinLED_verde, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
@@ -279,12 +306,13 @@ void setup() {
       receiveData();
     }
   }
-  prev_encoderMeasurement = encoderMeasurement;
   digitalWrite(pinLED_verde, LOW);
   #endif
+  prev_encoderMeasurement = encoderMeasurement;
   delay(500);
 
   // start driving (set a speed to the car and initialize the mpu)
+  objectivePosition = 2500-2000*turnClockWise;
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
 }
@@ -422,8 +450,11 @@ void loop() {
   // check turn every 50ms
   static uint32_t prev_ms_turn = millis();
   if (millis() > prev_ms_turn) {
+    // No need to turn around in the final lap this year, so we will comment the function
     //if (totalGiros == 8) changeDrivingDirection();
-    checkTurn();
+
+    // Check whether we have to turn or steer to avoid color blocks
+    if (!isParking) checkTurn();
     prev_ms_turn = millis() + 50;
   }
 
@@ -444,32 +475,91 @@ void loop() {
   switch (estado)
   {
   case e::Inicio:
-    if (yPosition >= 1750) {
-      decideTurn();
-      if (yPosition >= 2200) setSpeed(0);
-      if (turnSense !=0 ) {
-        firma1Detectada = firma2Detectada = false;
-        if (distancia270) setXcoord(distancia270);
-        else setXcoord(mapSize - distancia90);
-        objectivePosition = xPosition;
-        vTaskDelete(Task1);
-        analogWrite(pinLIDAR_motor, 0);
-        estado = e::Recto;
-        setSpeed(NormalSpeed);
-      }
-    }
+    //firma1Detectada = firma2Detectada = false; choose what to do with this line too --------------------------------------------------------
+    //objectivePosition = xPosition; //decide what to do with this line ----------------------------------------------------------------------
+    vTaskDelete(Task1);
+    analogWrite(pinLIDAR_motor, 0);
+    estado = e::Recto;
+    setSpeed(NormalSpeed);
   break;
   case e::Recto:
     if (totalGiros == 12) {
-      estado = e::Final;
+      estado = e::Posicionamiento;
     }
-    if (totalGiros == 6) setSpeed(CruisiereSpeed);
+    if (totalGiros == 5) {
+      setSpeed(CruisiereSpeed);
+    }
   break;
-  case e::Final:
-    if (yPosition >= 1150) {
+  case e::Final:  // we probably want to be redirected to here after we finish the parking manouver ---------------------------------------------
+    if (yPosition >= 1200) {
       setSpeed(0);
     }
   break;
+
+  case e::Arrancar:
+    //Ajustar el avance para que no se pase del bloque y tal...
+    if (xPosition*turnSense <= startXposition*turnSense - 150)
+    {
+      setSpeed(0);
+      delay(10);
+      estado = e::Reposicionar;
+    }
+  break;
+  case e::Reposicionar:
+    distancia0 = readDistance(0);
+    if (distancia0 != 0)
+    {
+      setYcoord(distancia0);
+      KPActual = positionKP;
+      estado = e::Inicio;
+    }
+  break;
+
+  case e::Posicionamiento:
+    objectivePosition = startXposition - 225*turnSense;
+    //KPActual = positionKP;
+    isParking = true;
+    setSpeed(StartSpeed);
+    estado = e::EntradaFase1;
+  break;
+  case e::EntradaFase1:
+    if (yPosition >= 1980-580*turnClockWise)
+    {
+      setSpeed(0);
+      KPActual = positionKPaparcar;
+      KDActual = positionKDaparcar;
+      delay(15);
+      setSpeed(-StartSpeed);
+      objectivePosition = startXposition;
+      estado = e::EntradaFase2;
+    }
+  break;
+  case e::EntradaFase2:
+    if (yPosition <= 1600-600*turnClockWise)
+    {
+      KPActual = positionKP;
+      KDActual = positionKD;
+      setSpeed(0);
+      /*
+      delay(15);
+      marcaPos = yPosition;
+      setSpeed(StartSpeed); // probably not necessary if we stop on point -----------------------------------------------------------
+      estado = e::EntradaFase3;*/
+    }
+  break;
+  case e::EntradaFase3:
+    if (yPosition >= marcaPos+25)
+    {
+      setSpeed(0);
+    }
+  break;
+  /*
+  maniobra alternativa
+  parar a 1900
+  marcha atras y girar tuedas a tope hasta que marque 90º (*turnSense)
+  girar ruedas hacia el otro lado y volver hacia atras hasta que el angulo sea 0
+  parar
+  */
   }
 }
 
@@ -497,7 +587,7 @@ void setSpeed(int speed) {
 }
 
 void setSteering(int angle) {
-  if (giros >= 4) {
+  if ((giros >= 5) & (giros < 12)) {
     if (abs(angle) >= 60) {
       setSpeed(NormalSpeed);
     } else setSpeed(CruisiereSpeed);
@@ -728,7 +818,7 @@ void setXcoord(uint16_t i) {
 }
 
 void setYcoord(uint16_t f) {
-  yPosition = mapSize - 150 - f;
+  yPosition = mapSize - lidarToImu * cos(mimpu.GetAngle() * (M_PI/180)) - f;
 }
 
 void checkTurn() {
@@ -824,15 +914,17 @@ void checkTurn() {
 void decideTurn(){
   distancia90 = readDistance(90);
   distancia270 = readDistance(270);
-  if (distancia90 > distancia270 && distancia90 > 1000)
+  if (distancia90 > distancia270 && distancia90 > 500)
   {
     turnSense = -1;
     turnClockWise = true;
+    setXcoord(1000-distancia90);
   }
-  else if (distancia270 > distancia90 && distancia270 > 1000)
+  else if (distancia270 > distancia90 && distancia270 > 500)
   {
     turnSense = 1;
     turnClockWise = false;
+    setXcoord(distancia270+2000);
   }
   else turnSense = 0;
 }
