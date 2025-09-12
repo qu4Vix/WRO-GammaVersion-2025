@@ -186,7 +186,7 @@ Due to the limited vision of our camera, the robot must perform corrective maneu
 
 <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Funny%20Image.jpg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo.png?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo.jpg?raw=true" width="800">
 
 ## Demonstration videos
 
