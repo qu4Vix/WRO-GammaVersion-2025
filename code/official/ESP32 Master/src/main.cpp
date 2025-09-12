@@ -43,7 +43,7 @@
 
 // Speeds
 #define StartSpeed 4
-#define CruisiereSpeed 10
+#define CruisiereSpeed 8
 #define NormalSpeed 5
 
 // Servo and direction variables
@@ -436,7 +436,7 @@ void loop() {
           vTaskDelete(Task1);
           analogWrite(pinLIDAR_motor, 0);
           estado = e::Recto;
-          setSpeed(NormalSpeed);
+          setSpeed(CruisiereSpeed);
           digitalWrite(pinBuzzer, LOW);
         }
       }

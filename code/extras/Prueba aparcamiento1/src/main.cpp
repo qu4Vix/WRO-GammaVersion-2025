@@ -7,6 +7,8 @@
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
 
+#include <ESP32Servo.h>
+
 // Practice mode (Button desabled) for easy launches while testing
 #define PRACTICE_MODE true
 
@@ -45,6 +47,9 @@ int8_t DireccionMovimiento = 1;
 
 // battery level variable
 uint8_t bateria;
+
+Servo CamServo;
+#define PIN_Servo_Cam 13
 
 // camera signatures
 
@@ -217,6 +222,9 @@ bool setCoordTramo(uint8_t tramo, uint16_t leftCoord, uint16_t rightCoord);
 void correctLane(uint8_t _tramo);
 void changeDrivingDirection();
 
+void moverCamara();
+void autoMoverCamara();
+
 void setup() {
   // put your setup code here, to run once:
   
@@ -233,6 +241,8 @@ void setup() {
   // set all the pin modes
   setPinModes();
   mimpu.SetDebugLedPin(pinLED_rojo);
+
+  CamServo.attach(PIN_Servo_Cam);
 /*
   #if ENABLE_WIFI == true
     miota.WiFiInit();
@@ -457,6 +467,12 @@ void loop() {
       if (totalGiros == 8) changeDrivingDirection();
       //checkTurn();
     prev_ms_turn = millis() + 50;
+  }
+
+  static uint32_t prev_ms_camara = millis();
+  if (millis() > prev_ms_camara) {
+    prev_ms_camara = millis() + 50;
+    autoMoverCamara();
   }
 
   // repeat direction pid iterations every 20ms
@@ -976,4 +992,38 @@ void changeDrivingDirection() {
       senseDirectionChanged = true;
     }
   }
+}
+
+void moverCamara(int angulo) {  // 0 == 85 | min == 0 | max == 170
+  int _ang = map(angulo*1.2 + 90, 0, 180, 0, 170);  //********************************************************Aumentar o siminuir
+  CamServo.write(constrain(_ang, 0, 170));
+}
+
+// Mover el automaticamente el servo de la camara
+void autoMoverCamara() {
+  double posicionBloqueX = 0;
+  double posicionBloqueY = 0;
+  int _ang;
+  if (yPosition <= 950){
+    posicionBloqueY = 900;
+  } else if (yPosition <= 1250) {
+    posicionBloqueY = 1400;
+  } else if (yPosition <= 1500) {
+    posicionBloqueY = 1900;
+  }
+  //_ang = 180 / M_PI * atan2(posicionBloqueX - posicionX, posicionBloqueY - posicionY);
+  //int _offsetLapAngle = 90 * giros;
+  //moverCamara(_ang - valorBrujula + _offsetLapAngle);
+  if (posicionBloqueY) {
+    _ang = 180 / M_PI * atan2(posicionBloqueX - xPosition, posicionBloqueY - yPosition);
+    int _offsetLapAngle = 90 * giros;
+    moverCamara(_ang - mimpu.GetAngle() + _offsetLapAngle);
+  } else {
+    if (turnSense) {
+      moverCamara(45);
+    } else {
+      moverCamara(-45);
+    }
+  }
+  
 }
