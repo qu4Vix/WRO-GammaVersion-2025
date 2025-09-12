@@ -176,12 +176,17 @@ Due to the limited vision of our camera, the robot must perform corrective maneu
 ## PHOTOS
 
 ### Car images
-
-**PLACEHOLDER**
-
+| | |
+| ------------------------- | ------------------------- |
+| ![front](./vehicle-photos/Front.jpg)  | ![back](./vehicle-photos/Back.jpg) |
+| ![right](./vehicle-photos/Right%20Side.jpg = z) | ![left](./vehicle-photos/Left%20Side.jpg) |
+| ![top](./vehicle-photos/Top.jpg) | ![bottom](./vehicle-photos/Bottom.jpg) |
 ### Team images
 
-**PLACEHOLDER**
+
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/Funny%20Image.jpg?raw=true" width="800">
+
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/Team%20Phoyos.png?raw=true" width="800">
 
 ## Demonstration videos
 
@@ -202,5 +207,4 @@ A copy of each license can be found in the [LICENSE](LICENSE) file. More informa
 
 ## Credits
 
-**PLACEHOLDER**
-
+We would like to thank DiverBOT and its team Javier and Ana for their help material given to this project.
