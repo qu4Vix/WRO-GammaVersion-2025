@@ -179,14 +179,14 @@ Due to the limited vision of our camera, the robot must perform corrective maneu
 | | |
 | ------------------------- | ------------------------- |
 | ![front](./vehicle-photos/Front.jpg)  | ![back](./vehicle-photos/Back.jpg) |
-| ![right](./vehicle-photos/Right%20Side.jpg = z) | ![left](./vehicle-photos/Left%20Side.jpg) |
+| ![right](./vehicle-photos/Right%20Side.jpg) | ![left](./vehicle-photos/Left%20Side.jpg) |
 | ![top](./vehicle-photos/Top.jpg) | ![bottom](./vehicle-photos/Bottom.jpg) |
 ### Team images
 
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/Funny%20Image.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Funny%20Image.jpg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/Team%20Phoyos.png?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Phoyos.png?raw=true" width="800">
 
 ## Demonstration videos
 

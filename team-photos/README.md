@@ -3,4 +3,4 @@ The team photos are available at this folder. We can find both an official and m
 
 | | |
 | ------------------------- | ------------------------- |
-| ![ ](./team-photos/Funny%20Image.jpg) | ![ ](./team-photos/Team%20Photo.jpg) |
+| ![ ](./Funny%20Image.jpg) | ![ ](./Team%20Photo.jpg) |
