@@ -2,7 +2,7 @@
 **This is our repository for the 2025 season of the WRO Future Engineer Challenge**
 
 ***
-<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Placeholder%20F.003.png?raw=true">
+<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo.jpg?raw=true">
 
 ## Contents
 
@@ -24,7 +24,7 @@ More information about Ackerman's Steering Geometry can be found in [this Wikipe
 
 According to competition regulations, only one motor can drive a drive axle. Therefore, in our case, we made the rear axle the drive axle to which the motor is connected. This is how the original kit was made. We also used the differential that came with the kit for proper operation. The differential allows the rear wheels to travel different distances, since the arc that each wheel travels is different when turning, as the turning radius of each wheel also varies. For our robot, we also used the motor that came with the kit; you can see the image below.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Placeholder%20F.001.png?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Motor%20Area.jpg?raw=true" width="500">
 
 This motor provides us with the necessary torque to comfortably move the robot without it getting stuck. In our case, we're not trying to get the robot to go at maximum speed, so the robot's overall speed wasn't a relevant factor when choosing the motor.
 
@@ -40,7 +40,7 @@ Thirdly, at the rear we can see from above the **PCB**, which houses much of our
 
 Finally, at the rear, the metal mast that raises and holds our **camera** is held on a 3D-designed base to the vehicle.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Placeholder%20F.002.png?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/LiDAR%20Area.jpg?raw=true" width="500">
 
 ## ELECTRONICS AND SENSORS
 
