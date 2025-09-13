@@ -55,3 +55,23 @@ We further worked on the decideTurn and the readDistance functions, since they w
 ReadDistance fucntion was finally working, after accounting for various measures and fixing a bug where the index of the array was set negative.
 The reset error was finally explained and solved. There was a voltage cutoff due to the 3.3v power supply having too much current demand. It was solved by putting the ESP32 and the camera in different circuits. As a future task it would be better to design a new PCB.
 The code folder was divided in two sub-folders, official- for the code that we wil use during the competition-, and extras.
+
+## July 20th - Telemetry creation
+ESP32 Telemtry was created to upload to the ESP32 Beetle which handles the telemetry. It receives bytes from the teleSerial port and sends them trough udp packets to a computer, specified by its IP.
+Telemetry receivers were created to receive, decode and process the telemetry data sent by the ESP32 Master trough different udp packets.
+
+## July 25th - Obstacle challenge code
+The ESP32 Master Obstacles project was created to handle the obstacle challenge. It uses the same algorithm as the ESP Master, using switches for the checkTurn and Turn functions. The colour blocks are detected and change the objective position of each lane.
+The code was imported from the 2023 repository.
+
+## July 29th - Final Open Challenge corrections
+The distances array from the lidar was duplicated before reading the distances so that writing and reading don't clash, since they occur in different cores. Also older measurements were accepted. Now decideTurn gets the turn sense quicker yet reliably, enabling us quicker completion times.
+
+## July 30th - Camera tests
+We created a Camera Testing project to test the code for the camera and colour block handling separetly from the main program.
+The tested code was added to the ESP32 Slave, which will operate the camera in the main program.
+From all the blocks detected, the heighest block is passed to the ESP Master, which will use this information to move the car.
+
+## August 18th & 21st Documentation update
+The repo README was sketched and the licenses were uploaded to the main license file for easier access.
+We uploaded the STL and FreeCAD of the 3D models for the 3D printer, the parts being: steering and support components, wheels, sensor supports and PCB spacers. Included a README describing the folder structure and purpose of the models.

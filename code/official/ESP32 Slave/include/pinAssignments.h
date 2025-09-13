@@ -14,8 +14,8 @@
 ****************************************************/
 
 // LED pins
-#define pinLED_1 34
-#define pinLED_2 35
+#define pinLED_1 18
+#define pinLED_2 19
 
 // Motor Pins (PWM + 3 Digital)
 #define pinPWM 14
