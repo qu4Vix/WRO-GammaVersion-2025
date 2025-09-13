@@ -1015,8 +1015,8 @@ void moveCamera(int8_t angle) {
 }
 
 void calculateCameraAngle(uint16_t bX, uint16_t bY) {
-  int _ang = 180 / M_PI *atan2(bX - xPosition, bY - yPosition);
-  int offset = 90 * giros;
+  int _ang = 180 / M_PI * atan2(bX - xPosition, bY - yPosition);
+  int offset = 90 * giros * turnSense;
   moveCamera(_ang - mimpu.GetAngle() + offset);
 }
 
