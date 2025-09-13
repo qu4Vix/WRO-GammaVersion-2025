@@ -237,9 +237,23 @@ bool setCoordTramo(uint8_t tramo, uint16_t leftCoord, uint16_t rightCoord);
 void correctLane(uint8_t _tramo);
 void changeDrivingDirection();
 
+void autoMoveCamera();
+
+void pitiditos(int num){
+  delay(200);
+  while(num > 0){
+    digitalWrite(pinBuzzer, HIGH);
+    delay(100);
+    digitalWrite(pinBuzzer,LOW);
+    delay(100);
+    num--;
+  }
+}
+
 void setup() {
   // put your setup code here, to run once:
-  
+  setPinModes();
+  pitiditos(1);
   #if ENABLE_TELEMETRY == true
   // begin telemetry serial
   teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
@@ -251,7 +265,7 @@ void setup() {
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
   // set all the pin modes
-  setPinModes();
+  
   mimpu.SetDebugLedPin(pinLED_rojo);
 /*
   #if ENABLE_WIFI == true
@@ -266,7 +280,7 @@ void setup() {
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
   mimpu.WorkOffset();
-
+  pitiditos(2);
   // begin the lidar
   lidar.begin(lidarSerial);
   rplidar_response_device_info_t info;
@@ -276,7 +290,7 @@ void setup() {
   //Serial.println("info: " + String(health.status) +", " + String(health.error_code));
   // detected...
   lidar.startScan();
-
+  pitiditos(3);
   //esp_task_wdt_deinit();
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
@@ -288,7 +302,7 @@ void setup() {
     &Task1,
     0);
   delay(500);
-
+  pitiditos(4);
   // start lidar's motor rotating at max allowed speed
   analogWrite(pinLIDAR_motor, 255);
   delay(500);
@@ -357,6 +371,12 @@ void loop() {
     }
     iteratePositionPID();
     prev_ms_position = millis() + 32;
+  }
+
+  static uint32_t prev_Cam = millis();
+  if (millis() >= prev_Cam) {
+    autoMoveCamera();
+    prev_Cam = millis() + 32;
   }
 
   #if ENABLE_TELEMETRY == true

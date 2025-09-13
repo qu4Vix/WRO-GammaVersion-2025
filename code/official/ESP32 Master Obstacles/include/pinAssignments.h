@@ -9,7 +9,7 @@
 
 
 // buzzer
-#define pinBuzzer 14
+#define pinBuzzer 32
 
 // LIDAR pins (UART2 + PWM)
 #define pinLIDAR_TX 16
@@ -40,4 +40,5 @@ void setPinModes() {
     pinMode(pinLED_batAmarillo, OUTPUT);
     pinMode(pinLED_batVerde, OUTPUT);
     pinMode(pinLIDAR_motor, OUTPUT);
+    pinMode(pinBuzzer, OUTPUT);
 }

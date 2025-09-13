@@ -25,7 +25,7 @@
 #include <CServo.h>
 #include <Encoder.h>
 #include <HuskyLens.h> // Software serial was not found so commented on library file (max and min changed for _max and _min)
-#include "credentials.h"
+//#include "credentials.h"
 #include "pinAssignments.h"
 #include <rom/rtc.h>
 
@@ -85,7 +85,7 @@ void setup() {
   Serial.println("Starting");
 
   // Initializing code for the  I2C, this is the connection to the camera
-  Wire.begin(18,19);
+  Wire.begin(21,22);
   while(!Husky.begin(Wire)) delay(100);
   if(Husky.begin(Wire)==1) Serial.println("HuskyLens connected");
 
