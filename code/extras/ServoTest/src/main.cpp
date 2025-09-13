@@ -1,30 +1,31 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-#define pinServo 13
+#define pinServo 12
 
-#define servo0 88
-#define servoRange 52
+#define servo0 85
+#define servoRange 85
 #define servoMAX servo0 + servoRange
 #define servoMIN servo0 - servoRange
 
 Servo miservo;
 
 void setup() {
+  Serial.begin(9600);
+
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
   ESP32PWM::allocateTimer(3);
 
-  miservo.setPeriodHertz(50);
-  miservo.attach(pinServo, 1000, 2000);
+  //miservo.setPeriodHertz(50);
+  miservo.attach(pinServo, 600, 2400);
 }
 
 void loop() {
-  miservo.write(servoMAX);
-  delay(10000);
-  miservo.write(servoMIN);
-  delay(10000);
-  miservo.write(servo0);
-  delay(10000);
+  if (Serial.available())
+  {
+    miservo.write(Serial.parseInt());
+  }
+  
 }

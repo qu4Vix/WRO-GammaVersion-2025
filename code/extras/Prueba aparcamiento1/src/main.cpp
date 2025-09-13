@@ -7,8 +7,6 @@
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
 
-#include <ESP32Servo.h>
-
 // Practice mode (Button desabled) for easy launches while testing
 #define PRACTICE_MODE true
 
@@ -48,8 +46,6 @@ int8_t DireccionMovimiento = 1;
 // battery level variable
 uint8_t bateria;
 
-Servo CamServo;
-#define PIN_Servo_Cam 13
 
 // camera signatures
 
@@ -222,7 +218,7 @@ bool setCoordTramo(uint8_t tramo, uint16_t leftCoord, uint16_t rightCoord);
 void correctLane(uint8_t _tramo);
 void changeDrivingDirection();
 
-void moverCamara();
+void moverCamara(int angulo);
 void autoMoverCamara();
 
 void setup() {
@@ -241,8 +237,6 @@ void setup() {
   // set all the pin modes
   setPinModes();
   mimpu.SetDebugLedPin(pinLED_rojo);
-
-  CamServo.attach(PIN_Servo_Cam);
 /*
   #if ENABLE_WIFI == true
     miota.WiFiInit();
@@ -286,11 +280,10 @@ void setup() {
   // wait until y coordinate is calculated
   digitalWrite(pinLED_verde, HIGH);
   yPosition = posYmagica;
-  //-------------------------------------------------------------------------
-  /*while (turnSense==0)
+  while (turnSense==0)
   {
     decideTurn();
-  }*/
+  }
 
   posicionXinicio = xPosition;
 
@@ -317,14 +310,8 @@ void setup() {
   delay(500);
 
   // start driving (set a speed to the car and initialize the mpu)
-  //objectivePosition = 2500-2000*turnClockWise;
-//-------------------------------------------------------------------------------------------------
-  xPosition = 500;
-  yPosition = 1000;
-  turnSense = -1;
-  turnClockWise = true;
-  posicionXinicio = 120;
-  estado = e::Posicionamiento;
+  objectivePosition = 2500-2000*turnClockWise;
+  estado = e::DesAparcar;
 
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
@@ -465,14 +452,14 @@ void loop() {
   static uint32_t prev_ms_turn = millis();
   if (millis() > prev_ms_turn) {
       if (totalGiros == 8) changeDrivingDirection();
-      //checkTurn();
+      checkTurn();
     prev_ms_turn = millis() + 50;
   }
 
   static uint32_t prev_ms_camara = millis();
   if (millis() > prev_ms_camara) {
     prev_ms_camara = millis() + 50;
-    autoMoverCamara();
+    //autoMoverCamara();
   }
 
   // repeat direction pid iterations every 20ms
@@ -482,6 +469,7 @@ void loop() {
     int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
     if(_setAngle != prev_setAngle) {
       setSteering(_setAngle*DireccionMovimiento);
+      moverCamara(_setAngle);
       prev_setAngle = _setAngle;
     }
     prev_directionError = actual_directionError;
@@ -994,9 +982,11 @@ void changeDrivingDirection() {
   }
 }
 
-void moverCamara(int angulo) {  // 0 == 85 | min == 0 | max == 170
-  int _ang = map(angulo*1.2 + 90, 0, 180, 0, 170);  //********************************************************Aumentar o siminuir
-  CamServo.write(constrain(_ang, 0, 170));
+void moverCamara(int angulo) {  // 0 == 90 | min == 0 | max == 180
+  angulo = constrain(angulo, -90, 90);
+  uint8_t _angle = angulo + 90;
+  commSerial.write(3);
+  commSerial.write(_angle);
 }
 
 // Mover el automaticamente el servo de la camara
@@ -1027,3 +1017,15 @@ void autoMoverCamara() {
   }
   
 }
+
+/*void itinerateCamaraPID() {
+  prev_positionError = positionError;
+  if (fixXposition) {
+    positionError = directionError(xPosition, objectivePosition);
+  } else {
+    positionError = directionError(yPosition, objectivePosition);
+  }
+  objectiveDirection = constrain(KPActual * positionError + KDActual * (positionError - prev_positionError), -90, 90) * DireccionMovimiento;
+  if (fixInverted) objectiveDirection = -objectiveDirection;
+  objectiveDirection += 90 * giros * turnSense;
+}*/
