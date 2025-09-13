@@ -29,7 +29,7 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 */
 // Speeds
 #define StartSpeed 2
-#define CruisiereSpeed 10
+#define CruisiereSpeed 7
 #define NormalSpeed 5
 
 // Servo and direction variables
@@ -133,7 +133,7 @@ double marcaPos;
 
 // position PID controller variables
 
-#define positionKP 0.2  // different from phase 1 for some reason --------------------------------------------------------------------
+#define positionKP 0.35  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
 #define positonKPmagico 6 
 #define positionKPaparcar 5
@@ -156,7 +156,7 @@ uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 const uint16_t blockPaths[2][4][3] =
 {
   { // anticlockwise
-    {2500, mapSize - 380, mapSize - trackCenter - trackLateral}, // Left, right
+    {2500, mapSize - trackCenter - trackLateral, mapSize - 380}, // Left, right
     {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral}
@@ -166,6 +166,21 @@ const uint16_t blockPaths[2][4][3] =
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // Left, right
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral},
     {500, trackCenter - trackLateral, trackCenter + trackLateral}
+  }
+};
+const uint16_t blockPositions[2][4][3] = 
+{
+  { // Anticlockwise
+    {950, 1400, 1900}, // First, second, third block
+    {2100, 1600, 1050},
+    {2100, 1600, 1050},
+    {950, 1400, 1900}
+  },
+  { // Clockwise
+    {950, 1400, 1900},
+    {950, 1400, 1900}, // First, second, third block
+    {2100, 1600, 1050},
+    {2100, 1600, 1050}
   }
 };
 uint8_t lastBlock;
@@ -484,7 +499,7 @@ void loop() {
   break;
   case e::Recto:
     if (totalGiros == 12) {
-      estado = e::Posicionamiento;
+      estado = e::Final;
     }
     if (totalGiros == 5) {
       setSpeed(CruisiereSpeed);
@@ -990,5 +1005,110 @@ void changeDrivingDirection() {
       }
       senseDirectionChanged = true;
     }
+  }
+}
+
+void moveCamera(int8_t angle) {
+  uint8_t _angle = constrain(angle, -90, 90) + 90;
+  commSerial.write(3);
+  commSerial.write(_angle);
+}
+
+void calculateCameraAngle(uint16_t bX, uint16_t bY) {
+  int _ang = 180 / M_PI *atan2(bX - xPosition, bY - yPosition);
+  int offset = 90 * giros;
+  moveCamera(_ang - mimpu.GetAngle() + offset);
+}
+
+void autoMoveCamera() {
+  switch ((tramo+1) * turnSense)
+  {
+  case -1:
+    if (yPosition <= 1500)
+      calculateCameraAngle(500, 1500);
+    else
+      calculateCameraAngle(500, 2000);
+  break;
+
+  case -2:
+    calculateCameraAngle(1000, 2500);
+  break;
+
+  case -3:
+    if (xPosition <= 1500)
+      calculateCameraAngle(1500, 2500);
+    else
+      calculateCameraAngle(2000, 2500);
+  break;
+
+  case -4:
+    calculateCameraAngle(2500, 2000);
+  break;
+
+  case -5:
+    if (yPosition >= 1500)
+      calculateCameraAngle(2500, 1500);
+    else
+      calculateCameraAngle(2500, 1000);
+  break;
+
+  case -6:
+    calculateCameraAngle(2000, 500);
+  break;
+
+  case -7:
+    if (xPosition >= 1500)
+      calculateCameraAngle(1500, 500);
+    else
+      calculateCameraAngle(1000, 500);
+  break;
+
+  case -8:
+    calculateCameraAngle(500, 1000);
+  break;
+
+  case 1:
+    if (yPosition <= 1500)
+      calculateCameraAngle(2500, 1500);
+    else
+      calculateCameraAngle(2500, 2000);
+  break;
+
+  case 2:
+    calculateCameraAngle(2000, 2500);
+  break;
+
+  case 3:
+    if (xPosition >= 1500)
+      calculateCameraAngle(1500, 2500);
+    else
+      calculateCameraAngle(1000, 2500);
+  break;
+
+  case 4:
+    calculateCameraAngle(500, 2000);
+  break;
+
+  case 5:
+    if (yPosition >= 1500)
+      calculateCameraAngle(500, 1500);
+    else
+      calculateCameraAngle(500, 1000);
+  break;
+
+  case 6:
+    calculateCameraAngle(1000, 500);
+  break;
+
+  case 7:
+    if (xPosition <= 1500)
+      calculateCameraAngle(1500, 500);
+    else
+      calculateCameraAngle(2000, 500);
+  break;
+
+  case 8:
+    calculateCameraAngle(2500, 1000);
+  break;
   }
 }

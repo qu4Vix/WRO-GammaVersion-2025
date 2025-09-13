@@ -32,7 +32,9 @@ class CServo{  //maneja el servo
 public:
   CServo(byte PinServo);
   void Attach();
-  void MoveServo(int _angulo);
+  void Attach(uint16_t servoMIN, uint16_t servoMAX);
+  void MoveServo(int angle);
+  void MoveSteeringServo(int angle);
   int GetAngle();
   void BeginPWM();
 

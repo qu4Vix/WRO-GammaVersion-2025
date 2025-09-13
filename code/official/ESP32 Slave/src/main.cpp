@@ -36,6 +36,9 @@
 #define ENABLE_WIFI false         // WIFI IS NOT USED ON THIS BOARD
 #define ROUND_NUMBER 2            // Change this to 1 for round Open Challenge and 2 for round Obstacle Challenge
 
+#define voltageReductionRatio 3.14 // This is the ratio between the real battery voltage and the voltage read by the ADC pin, due to the voltage divider we use since the battery voltage is higher than 3.3V - the maximum voltage the ADC pin can read. 4700 and 2200 resistors are used for the voltage divider.
+#define ADC_CONVERSION_FACTOR 1240 // This is the factor to convert the voltage into ADC reading, since the ADC gives a value between 0 and 4095 corresponding to a voltage between 0 and 3.3V
+
 // Everytime we see a #if ROUND_NUMBER == 2 this is made to avoid running that part of the code when we are in Open Challenge and only run it in Obstacle Challenge
 #if ROUND_NUMBER == 2 
 #define TAMANO_MINIMO_ESQUIVE 20  // This is not used right now, but it is kept just in case we need it
@@ -51,6 +54,7 @@ hw_timer_t* timerHandler;
 HardwareSerial commSerial(1);
 Motor mimotor(pinPWM, pinDir1, pinDir2, pinEn, 0.25, 1);
 CServo miservo(pinServo);
+CServo miservoCam(pinServoCam);
 Encoder miencoder(pinEncoder_DT);
 HUSKYLENS Husky;
 HUSKYLENSResult fHusky;
@@ -109,7 +113,9 @@ void setup() {
   mimotor.Init();
   miservo.BeginPWM();
   miservo.Attach();
-  miservo.MoveServo(0);
+  miservo.MoveSteeringServo(0);
+  miservoCam.Attach(600, 2400);
+  miservoCam.MoveServo(90);
   timerAlarmEnable(timerHandler);
 }
 
@@ -223,7 +229,13 @@ void receiveData() {
     uint8_t _angleByte;
     commSerial.readBytes(&_angleByte, 1);
     int _angle = _angleByte - 90;
-    miservo.MoveServo(_angle);
+    miservo.MoveSteeringServo(_angle);
+  } else
+  if (firstByte == 3) // This reads a the angle information for the camera servo
+  {
+    uint8_t _angleByte;
+    commSerial.readBytes(&_angleByte, 1);
+    miservoCam.MoveServo(_angleByte);
   }
 }
 

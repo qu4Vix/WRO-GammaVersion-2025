@@ -28,12 +28,21 @@ void CServo::BeginPWM() {
 	ESP32PWM::allocateTimer(3);
 }
 
-void CServo::Attach() {
+void CServo::Attach(uint16_t servoMIN, uint16_t servoMAX) {
   Miservo.setPeriodHertz(50);
-  Miservo.attach(_pinServo, 1000, 2000);
+  Miservo.attach(_pinServo, servoMIN, servoMAX);
+}
+
+void CServo::Attach() {
+  Attach(1000, 2000);
 }
 
 void CServo::MoveServo(int angle) {
+  _ang = constrain(angle, 0, 180);
+  Miservo.write(_ang);
+}
+
+void CServo::MoveSteeringServo(int angle) {
   _ang = map(angle, -90, 90, _servoMIN, _servoMAX);
   _ang = constrain(_ang, _servoMIN, _servoMAX);
   Miservo.write(_ang);

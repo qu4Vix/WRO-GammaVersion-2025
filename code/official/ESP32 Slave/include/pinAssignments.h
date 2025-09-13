@@ -25,6 +25,7 @@
 
 // Servo pin (PWM)
 #define pinServo 13
+#define pinServoCam 12
 
 // Encoder pins
 #define pinEncoder_CLK 32

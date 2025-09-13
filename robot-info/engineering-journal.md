@@ -43,10 +43,15 @@ On another, unsuccessful attempt of solving the reset issue, we disabled the wat
 The Lidar seems to take too long measuring distances to decide the turn sense, so we modify the readDistance function, which still doesn't work as wanted.
 For debugging purposes, we store the distances to the right and to the left of the robot, to send them trough telemetry.
 
-## July 17th - Simple camera code
+## July 17th - Simple camera code and corrections to the master
 Simple code added to the ESP32 Slave to measure colour blocks with the HUSKY and send them to the Master.
 We noticed a deviation of the car on start, due to the servo's 0 angle not being properly adjusted. We update the servo MIN and MAX in our CServo library to deal with it
 We sent the reset reason of the Slave's cores to the master, whcih then sends it rough telemetry, trying to find out the reason of the rebooting of the car.
+For quicker launches when testing the car, we created the PRACTICE_MODE define, which starts the car without expenting a button press when on true.
+To check the conversion between encoder updates and milimeters, we created a test state "Prueba", which moves the car 3 "car" meters to calculate the quotient.
+We further worked on the decideTurn and the readDistance functions, since they were still run to slow.
 
-
-## July 19th
+## July 19th - Phase 1 running
+ReadDistance fucntion was finally working, after accounting for various measures and fixing a bug where the index of the array was set negative.
+The reset error was finally explained and solved. There was a voltage cutoff due to the 3.3v power supply having too much current demand. It was solved by putting the ESP32 and the camera in different circuits. As a future task it would be better to design a new PCB.
+The code folder was divided in two sub-folders, official- for the code that we wil use during the competition-, and extras.
