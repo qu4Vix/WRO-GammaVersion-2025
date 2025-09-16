@@ -237,6 +237,7 @@ bool setCoordTramo(uint8_t tramo, uint16_t leftCoord, uint16_t rightCoord);
 void correctLane(uint8_t _tramo);
 void changeDrivingDirection();
 
+void moveCamera(int8_t angle);
 void autoMoveCamera();
 
 void pitiditos(int num){
@@ -375,7 +376,11 @@ void loop() {
 
   static uint32_t prev_Cam = millis();
   if (millis() >= prev_Cam) {
-    autoMoveCamera();
+    if (totalGiros < 5) {
+      autoMoveCamera();
+    } else {
+      moveCamera(0);
+    }
     prev_Cam = millis() + 32;
   }
 
@@ -986,14 +991,14 @@ bool setCoordTramo(uint8_t _tramo, uint16_t leftCoord, uint16_t rightCoord) {
   if (firma1Detectada) {
     arrayBloques[_tramo] = GreenSignature;
     lastBlock = GreenSignature;
-    tramos[turnClockWise][_tramo] = leftCoord;
+    //tramos[turnClockWise][_tramo] = leftCoord; // ------------------------ innecesario este año -------------------------------- 
     firma1Detectada = false;
     return true;
   }
   if (firma2Detectada) {
     arrayBloques[_tramo] = RedSignature;
     lastBlock = RedSignature;
-    tramos[turnClockWise][_tramo] = rightCoord;
+    //tramos[turnClockWise][_tramo] = rightCoord; // ----------------------- innecesario este año --------------------------------
     firma2Detectada = false;
     return true;
   }
@@ -1034,10 +1039,20 @@ void moveCamera(int8_t angle) {
   commSerial.write(_angle);
 }
 
+// angle in degrees, with respect to the Y axis, anticlockwise
+int atan3(double dx, double dy) {
+  int beta = 180 / M_PI * atan(-dx/dy);
+  if (dy > 0 && dx < 0) return beta;
+  else if (dy > 0 && dx > 0) return beta + 360;
+  else if (dy < 0) return beta + 180; // here we get angles between 90 and 270
+  else if (dy == 0 && dx > 0) return -90; // angle decreases in the clockwise (positive x) direction
+  else if (dy == 0 && dx < 0) return 90; // angle increases in the anti-clockwise (negative x) direction
+  else return 0; // indeterminate
+}
+
 void calculateCameraAngle(uint16_t bX, uint16_t bY) {
-  int _ang = 180 / M_PI * atan2(bX - xPosition, bY - yPosition);
-  int offset = 90 * giros * turnSense;
-  moveCamera(_ang - mimpu.GetAngle() + offset);
+  int _ang = atan3(bX - xPosition, bY - yPosition); // this angle is given with respect to the Y axis, increasing anti-cloclwise -like the IMU angle
+  moveCamera(_ang - mimpu.GetAngle()); // check if the camera 90º (Servo.write(0)) is the same direction as the IMU 90º
 }
 
 void autoMoveCamera() {
@@ -1087,47 +1102,47 @@ void autoMoveCamera() {
     calculateCameraAngle(500, 1000);
   break;
 
-  case 1:
+  case 2:
     if (yPosition <= 1500)
       calculateCameraAngle(2500, 1500);
     else
       calculateCameraAngle(2500, 2000);
   break;
 
-  case 2:
+  case 3:
     calculateCameraAngle(2000, 2500);
   break;
 
-  case 3:
+  case 4:
     if (xPosition >= 1500)
       calculateCameraAngle(1500, 2500);
     else
       calculateCameraAngle(1000, 2500);
   break;
 
-  case 4:
+  case 5:
     calculateCameraAngle(500, 2000);
   break;
 
-  case 5:
+  case 6:
     if (yPosition >= 1500)
       calculateCameraAngle(500, 1500);
     else
       calculateCameraAngle(500, 1000);
   break;
 
-  case 6:
+  case 7:
     calculateCameraAngle(1000, 500);
   break;
 
-  case 7:
+  case 8:
     if (xPosition <= 1500)
       calculateCameraAngle(1500, 500);
     else
       calculateCameraAngle(2000, 500);
   break;
 
-  case 8:
+  case 1:
     calculateCameraAngle(2500, 1000);
   break;
   }
