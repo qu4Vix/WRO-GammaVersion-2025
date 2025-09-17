@@ -85,15 +85,17 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting");
 
-  // Initializing code for the  I2C, this is the connection to the camera
-  Wire.begin(21,22);
-  while(!Husky.begin(Wire)) delay(100);
-  if(Husky.begin(Wire)==1) Serial.println("HuskyLens connected");
-
-  Husky.writeAlgorithm(ALGORITHM_COLOR_RECOGNITION);
-  
   // A function of the pinAssigments.h include
   setPinModes();
+
+  digitalWrite(pinLED_Azul, HIGH);
+
+  // Initializing code for the  I2C, this is the connection to the camera
+  Wire.begin(pinCamSDA, pinCamSCL);
+  while (!Husky.begin(Wire)) delay(100);
+  if (Husky.begin(Wire) == 1) Serial.println("HuskyLens connected");
+
+  Husky.writeAlgorithm(ALGORITHM_COLOR_RECOGNITION);
 
   // Initializing the Communication Serial, this is how the Slave communicates to the Master
   commSerial.begin(1000000, SERIAL_8N1, pinTX, pinRX);
@@ -117,6 +119,7 @@ void setup() {
   miservo.MoveSteeringServo(0);
   miservoCam.Attach(600, 2400);
   miservoCam.MoveServo(90);
+  digitalWrite(pinLED_Azul, LOW);
   timerAlarmEnable(timerHandler);
 }
 

@@ -8,7 +8,7 @@
 #include <esp_task_wdt.h>
 
 // Practice mode (Button desabled) for easy launches while testing
-#define PRACTICE_MODE true
+#define PRACTICE_MODE false
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
@@ -29,8 +29,18 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 */
 // Speeds
 #define StartSpeed 2
-#define CruisiereSpeed 7
-#define NormalSpeed 5
+#define CruisiereSpeed 5
+#define NormalSpeed 3
+
+/*
+ *  Speed infromation
+ *  Minimum speed: 2
+ *  Safe speed for recognition: 3
+ *  Safe speeds for cruisiere: 5,6
+ *  Risky speed: 7
+ *
+ * 
+ */
 
 // Servo and direction variables
 
@@ -46,8 +56,8 @@ uint8_t bateria;
 
 // camera signatures
 
-#define GreenSignature 2
-#define RedSignature 1
+#define GreenSignature 1
+#define RedSignature 2
 
 bool firma1Detectada = false;
 uint8_t firma1X = 18;
@@ -329,19 +339,21 @@ void setup() {
   }
   #else
   // Waits until the start button is pressed while reading from the intercommunication serial
-  digitalWrite(pinLED_verde, HIGH);
+  digitalWrite(pinLED_amarillo, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
     {
       receiveData();
     }
   }
-  digitalWrite(pinLED_verde, LOW);
+  digitalWrite(pinLED_amarillo, LOW);
   #endif
   prev_encoderMeasurement = encoderMeasurement;
   delay(500);
 
   // start driving (set a speed to the car and initialize the mpu)
+  autoMoveCamera();
+  firma1Detectada=firma1Detectada=0;
   objectivePosition = 2500-2000*turnClockWise;
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
@@ -394,6 +406,7 @@ void loop() {
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
+   /*
     for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
@@ -404,7 +417,7 @@ void loop() {
         teleSerial.write(distances[zi]>>8);
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
-    }
+    }*/
     /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
@@ -460,6 +473,7 @@ void loop() {
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
     enviarDato((byte*)&tramo,sizeof(tramo));
+    enviarDato((byte*)&distancia0,sizeof(distancia0));
     enviarDato((byte*)&distancia90,sizeof(distancia90));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
     
@@ -524,7 +538,7 @@ void loop() {
   break;
   case e::Recto:
     if (totalGiros == 12) {
-      estado = e::Final;
+      estado = e::Posicionamiento;
     }
     if (totalGiros == 5) {
       setSpeed(CruisiereSpeed);
@@ -566,12 +580,14 @@ void loop() {
     if (yPosition >= 1980-580*turnClockWise)
     {
       setSpeed(0);
+      estado = e::Final;
+      /*
       KPActual = positionKPaparcar;
       KDActual = positionKDaparcar;
       delay(15);
       setSpeed(-StartSpeed);
       objectivePosition = startXposition;
-      estado = e::EntradaFase2;
+      estado = e::EntradaFase2;*/
     }
   break;
   case e::EntradaFase2:
@@ -627,11 +643,13 @@ void setSpeed(int speed) {
 }
 
 void setSteering(int angle) {
+  /*
+  // reduce speed when doing sharp turns
   if ((giros >= 5) & (giros < 12)) {
     if (abs(angle) >= 60) {
       setSpeed(NormalSpeed);
     } else setSpeed(CruisiereSpeed);
-  }
+  }*/
   angle = constrain(angle, -90, 90);
   uint8_t _angle = angle + 90;
   commSerial.write(2);
@@ -641,20 +659,21 @@ void setSteering(int angle) {
 void receiveData() {
   uint8_t firstByte;
   commSerial.readBytes(&firstByte, 1);
-  if (firstByte == 7) { //Encoder data
+  if (firstByte == 7) { // Encoder data
     uint8_t bytes[4];
     commSerial.readBytes(bytes, 4);
     encoderMeasurement = 0;
     for (uint8_t iteration; iteration < 4; iteration++) {
       encoderMeasurement = encoderMeasurement | bytes[iteration] << (8*iteration);
     }
-  } else if (firstByte == 6) { //Batery voltage
+  } else
+  if (firstByte == 6) { // Batery voltage
     uint8_t tensionValue;
     commSerial.readBytes(&tensionValue, 1);
     bateria = tensionValue;
     manageTension(tensionValue);
-  }
-  else if (firstByte == 5) { //Camera data
+  } else 
+  if (firstByte == 5) { // Camera data
     uint8_t Signature;
     uint8_t SignatureX;
     uint8_t SignatureY;
@@ -663,6 +682,7 @@ void receiveData() {
     commSerial.readBytes(&SignatureY, 1);
     // solo aceptar firmas en la primera vuelta
     if (totalGiros <= 4) {
+      pitiditos(1);
       firma1Detectada = (Signature==1);
       firma2Detectada = (Signature==2);
       firma1X = SignatureX;
@@ -1039,9 +1059,10 @@ void moveCamera(int8_t angle) {
   commSerial.write(_angle);
 }
 
-// angle in degrees, with respect to the Y axis, anticlockwise
-int atan3(double dx, double dy) {
-  int beta = 180 / M_PI * atan(-dx/dy);
+// angle in degrees, between 0 and 360º, with respect to the Y axis, anticlockwise
+int atan3(double _dx, double dy) {
+  double dx = _dx * turnSense;
+  int beta = 180 / M_PI * atan(-dx / dy);
   if (dy > 0 && dx < 0) return beta;
   else if (dy > 0 && dx > 0) return beta + 360;
   else if (dy < 0) return beta + 180; // here we get angles between 90 and 270
@@ -1051,62 +1072,62 @@ int atan3(double dx, double dy) {
 }
 
 void calculateCameraAngle(uint16_t bX, uint16_t bY) {
-  int _ang = atan3(bX - xPosition, bY - yPosition); // this angle is given with respect to the Y axis, increasing anti-cloclwise -like the IMU angle
+  int _ang = atan3(bX - xPosition, bY - yPosition) * turnSense; // this angle is given with respect to the Y axis, increasing anti-cloclwise -like the IMU angle
   moveCamera(_ang - mimpu.GetAngle()); // check if the camera 90º (Servo.write(0)) is the same direction as the IMU 90º
 }
 
 void autoMoveCamera() {
   switch ((tramo+1) * turnSense)
   {
-  case -1:
-    if (yPosition <= 1500)
-      calculateCameraAngle(500, 1500);
-    else
-      calculateCameraAngle(500, 2000);
-  break;
-
   case -2:
-    calculateCameraAngle(1000, 2500);
+    if (yPosition <= 1450)
+      calculateCameraAngle(600, 1500);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
+    else
+      calculateCameraAngle(600, 2000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
   break;
 
   case -3:
-    if (xPosition <= 1500)
+    calculateCameraAngle(1000, 2500);
+  break;
+
+  case -4:
+    if (xPosition <= 1450)
       calculateCameraAngle(1500, 2500);
     else
       calculateCameraAngle(2000, 2500);
   break;
 
-  case -4:
+  case -5:
     calculateCameraAngle(2500, 2000);
   break;
 
-  case -5:
-    if (yPosition >= 1500)
+  case -6:
+    if (yPosition >= 1650)
       calculateCameraAngle(2500, 1500);
     else
       calculateCameraAngle(2500, 1000);
   break;
 
-  case -6:
+  case -7:
     calculateCameraAngle(2000, 500);
   break;
 
-  case -7:
-    if (xPosition >= 1500)
+  case -8:
+    if (xPosition >= 1650)
       calculateCameraAngle(1500, 500);
     else
       calculateCameraAngle(1000, 500);
   break;
 
-  case -8:
-    calculateCameraAngle(500, 1000);
+  case -1:
+    calculateCameraAngle(600, 1000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
   break;
 
   case 2:
-    if (yPosition <= 1500)
-      calculateCameraAngle(2500, 1500);
+    if (yPosition <= 1450)
+      calculateCameraAngle(2380, 1500); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
     else
-      calculateCameraAngle(2500, 2000);
+      calculateCameraAngle(2380, 2000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
   break;
 
   case 3:
@@ -1114,7 +1135,7 @@ void autoMoveCamera() {
   break;
 
   case 4:
-    if (xPosition >= 1500)
+    if (xPosition >= 1650)
       calculateCameraAngle(1500, 2500);
     else
       calculateCameraAngle(1000, 2500);
@@ -1125,7 +1146,7 @@ void autoMoveCamera() {
   break;
 
   case 6:
-    if (yPosition >= 1500)
+    if (yPosition >= 1650)
       calculateCameraAngle(500, 1500);
     else
       calculateCameraAngle(500, 1000);
@@ -1136,14 +1157,14 @@ void autoMoveCamera() {
   break;
 
   case 8:
-    if (xPosition <= 1500)
+    if (xPosition <= 1450)
       calculateCameraAngle(1500, 500);
     else
       calculateCameraAngle(2000, 500);
   break;
 
   case 1:
-    calculateCameraAngle(2500, 1000);
+    calculateCameraAngle(2380, 1000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
   break;
   }
 }

@@ -1,11 +1,11 @@
 // LED pins
 #define pinLED_rojo 12
-#define pinLED_verde 13
+#define pinLED_amarillo 13
 
 // Battery level LED pins
-#define pinLED_batRojo 27
+#define pinLED_batRojo 25
 #define pinLED_batAmarillo 26
-#define pinLED_batVerde 25
+#define pinLED_batVerde 27
 
 
 // buzzer
@@ -35,7 +35,7 @@
 void setPinModes() {
     pinMode(pinBoton, INPUT_PULLUP);
     pinMode(pinLED_rojo, OUTPUT);
-    pinMode(pinLED_verde, OUTPUT);
+    pinMode(pinLED_amarillo, OUTPUT);
     pinMode(pinLED_batRojo, OUTPUT);
     pinMode(pinLED_batAmarillo, OUTPUT);
     pinMode(pinLED_batVerde, OUTPUT);

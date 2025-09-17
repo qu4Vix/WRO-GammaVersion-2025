@@ -1,6 +1,6 @@
 import socket
 
-LOCAL_UDP_IP = "192.168.144.108"
+LOCAL_UDP_IP = "192.168.144.46"
 SHARED_UDP_PORT = 5007
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet  # UDP
 sock.bind((LOCAL_UDP_IP, SHARED_UDP_PORT))
@@ -120,8 +120,10 @@ def parse_packet(receivedBytes):
             i =35
             tramo=receivedBytes[i]
             i = 36
-            distancia90 = (receivedBytes[i] << 8) | receivedBytes[i+1]
+            distancia0 = (receivedBytes[i] << 8) | receivedBytes[i+1]
             i = 38
+            distancia90 = (receivedBytes[i] << 8) | receivedBytes[i+1]
+            i = 40
             distancia270 = (receivedBytes[i] << 8) | receivedBytes[i+1]
             
             print("Si,si.................")
@@ -138,6 +140,7 @@ def parse_packet(receivedBytes):
                 'Angulo': angulo,
                 'AnguloObjetivo': anguloObjetivo,
                 'Tramo': tramo,
+                'Distancia0' : distancia0,
                 'Distancia90':distancia90,
                 'Distancia270':distancia270,
             }

@@ -14,8 +14,8 @@
 ****************************************************/
 
 // LED pins
-#define pinLED_1 18
-#define pinLED_2 19
+#define pinLED_Azul 18
+#define pinLED_Amarillo 19
 
 // Motor Pins (PWM + 3 Digital)
 #define pinPWM 14
@@ -23,7 +23,7 @@
 #define pinDir2 27
 #define pinEn 25
 
-// Servo pin (PWM)
+// Servo pins (PWM)
 #define pinServo 13
 #define pinServoCam 12
 
@@ -35,6 +35,10 @@
 #define pinTX 4
 #define pinRX 2
 
+// Camera (HuskyLens) pins (I2C)
+#define pinCamSDA 21
+#define pinCamSCL 22
+
 // Battery tension reader pin
 #define pinVoltage 36
 
@@ -42,4 +46,6 @@ void setPinModes() {
     pinMode(pinVoltage, INPUT);
     pinMode(pinEncoder_DT, INPUT);
     pinMode(pinEncoder_CLK, INPUT);
+    pinMode(pinLED_Azul, OUTPUT);
+    pinMode(pinLED_Amarillo, OUTPUT);
 }
