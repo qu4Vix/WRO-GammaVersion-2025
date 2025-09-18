@@ -89,6 +89,8 @@ uint8_t estado = e::Arrancar;
 
 // size of the map (mm)
 #define mapSize 3000
+// width of the lanes
+#define trackWidth 1000
 // coordinate of the central lane (mm)
 #define trackCenter 500
 // coordinate of the lateral lane (mm)
@@ -114,6 +116,7 @@ int8_t turnSense = 0;
 bool turnClockWise;
 // whether we are moving forwards (+1) or backwards (-1), in order to account for corrections in the PID. We initialize it at 0 (not moving)
 int8_t motionDirection = 0;
+bool isRecognizing = true;
 bool isParking = false;
 
 // encoder variables
@@ -166,14 +169,14 @@ uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 const uint16_t blockPaths[2][4][3] =
 {
   { // anticlockwise
-    {2500, mapSize - trackCenter - trackLateral, mapSize - 380}, // Left, right
+    {2500, mapSize - trackCenter - trackLateral, mapSize - 380}, //Center, left, right
     {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral}
   },
   { // clockwise
     {500, 380, trackCenter + trackLateral},
-    {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // Left, right
+    {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // Center, left, right
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral},
     {500, trackCenter - trackLateral, trackCenter + trackLateral}
   }
@@ -196,6 +199,7 @@ const uint16_t blockPositions[2][4][3] =
 uint8_t lastBlock;
 bool senseDirectionChanged = false;
 bool bloqueEnMedio = false;
+uint16_t parkingY;
 
 // object declarations
 
@@ -249,14 +253,16 @@ void changeDrivingDirection();
 
 void moveCamera(int8_t angle);
 void autoMoveCamera();
+void enableCamera();
+
+void saveParkingPosition();
 
 void pitiditos(int num){
-  delay(200);
   while(num > 0){
     digitalWrite(pinBuzzer, HIGH);
-    delay(100);
+    delay(50);
     digitalWrite(pinBuzzer,LOW);
-    delay(100);
+    delay(50);
     num--;
   }
 }
@@ -351,10 +357,15 @@ void setup() {
   prev_encoderMeasurement = encoderMeasurement;
   delay(500);
 
-  // start driving (set a speed to the car and initialize the mpu)
+  // move camera away from parking lot
   autoMoveCamera();
   firma1Detectada=firma1Detectada=0;
+  // set default first lane path to the inner one in order for the camera to look away from the block
+  if (turnClockWise) arrayBloques[0] = arrayBloques[1] = GreenSignature;
+  else arrayBloques[0] = arrayBloques[1] = RedSignature;
+  // set the objective position of the unparking
   objectivePosition = 2500-2000*turnClockWise;
+  // start driving (set a speed to the car and initialize the mpu)
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
 }
@@ -388,12 +399,10 @@ void loop() {
 
   static uint32_t prev_Cam = millis();
   if (millis() >= prev_Cam) {
-    if (totalGiros < 5) {
+    if (isRecognizing) {
       autoMoveCamera();
-    } else {
-      moveCamera(0);
     }
-    prev_Cam = millis() + 32;
+    prev_Cam = millis() + 100;
   }
 
   #if ENABLE_TELEMETRY == true
@@ -430,27 +439,7 @@ void loop() {
     }*/
 
     /*ENVIAMOS PAQUETE TIPO 5 INFORMACION GENERAL*/
-                /*
-            --Posicion x 8 bytes
-            --Posición y 8 bytes
-            --Posición x Objetivo 8 bytes
-            --Posición y Objetivo 8 bytes
-            --Encoder 32 uint32
-            --Estado 8bits  uint
-            --batería 8bits uint
-            --Ángulo 16 float
-            --Angulo Objetivo 16 float
-            --Cámara firma1 Detectada 1 byte
-            --Cámara firma1 x 8 bits
-            --Cámara firma1 y 8 bits
-            --Cámara firma2 Detectada 1byte
-            --ArrayTramo      8 bytes
-            --tramo           1 byte
-            
-            |XXXX|YYYY|MMMM|NNNN|QQQQ|W|E|RRRR|TTTT|U|I|O|A|S|D|arrayTramo|tramo
-             0000 0000 0111 1111 1112 2 2 2222 2223 3 3 3 3 3 3 33344444   4
-             1234 5678 9012 3456 7890 1 2 3456 7890 1 2 3 4 5 6 78901234   5
-            */
+    
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
@@ -560,12 +549,19 @@ void loop() {
     }
   break;
   case e::Reposicionar:
-    distancia0 = readDistance(0);
-    if (distancia0 != 0)
+    if (!distancia0) {  // changed to check telemetry
+      distancia0 = readDistance(0);
+    }
+    else
     {
       setYcoord(distancia0);
+      saveParkingPosition();
       KPActual = positionKP;
-      estado = e::Inicio;
+      digitalWrite(pinLED_amarillo, HIGH);
+      if (!digitalRead(pinBoton)) {         // restore old version for competition ------------------------------
+        digitalWrite(pinLED_amarillo, LOW);
+        estado = e::Inicio;
+      }
     }
   break;
 
@@ -577,7 +573,7 @@ void loop() {
     estado = e::EntradaFase1;
   break;
   case e::EntradaFase1:
-    if (yPosition >= 1980-580*turnClockWise)
+    if (yPosition >= parkingY)
     {
       setSpeed(0);
       estado = e::Final;
@@ -681,13 +677,12 @@ void receiveData() {
     commSerial.readBytes(&SignatureX, 1);
     commSerial.readBytes(&SignatureY, 1);
     // solo aceptar firmas en la primera vuelta
-    if (totalGiros <= 4) {
-      pitiditos(1);
+    if (isRecognizing) {
+      //pitiditos(1);
       firma1Detectada = (Signature==1);
       firma2Detectada = (Signature==2);
       firma1X = SignatureX;
       firma1Y = SignatureY;
-      if (totalGiros == 4 && tramo == 1) firma1Detectada = firma2Detectada = 0;
     }
   }
 }
@@ -810,7 +805,7 @@ void iteratePositionPID() {
 }
 
 void turn() {
-  firma1Detectada = firma2Detectada = 0;
+  enableCamera();
   switch ((tramo+1) * turnSense)
   {
   case -2:
@@ -897,6 +892,10 @@ void checkTurn() {
   case -2:
     if ((yPosition <= 1600) && setCoordTramo(1, 200, 800)) correctLane(1);
     if (yPosition >= 2000) turn();
+    if (totalGiros >= 4) {
+      isRecognizing = false;
+      moveCamera(0);
+    }
     break;
 
   case -3:
@@ -937,6 +936,10 @@ void checkTurn() {
   case 2:
     if ((yPosition <= 1600) && setCoordTramo(1, 2200, 2800)) correctLane(1);
     if (yPosition >= 2000) turn();
+    if (totalGiros >= 4) {
+      isRecognizing = false;
+      moveCamera(0);
+    }
     break;
 
   case 3:
@@ -991,6 +994,7 @@ void decideTurn(){
 
 void changeLane(uint8_t _tramo) {
   objectivePosition = blockPaths[turnClockWise][uint8_t(_tramo/2)][arrayBloques[_tramo]];
+  enableCamera();
   tramo++;
 }
 
@@ -1087,7 +1091,11 @@ void autoMoveCamera() {
   break;
 
   case -3:
-    calculateCameraAngle(1000, 2500);
+    if (xPosition <= 950) 
+      calculateCameraAngle(1000, 2500);
+    else {
+      calculateCameraAngle(1500, 2500);
+    }
   break;
 
   case -4:
@@ -1098,7 +1106,10 @@ void autoMoveCamera() {
   break;
 
   case -5:
-    calculateCameraAngle(2500, 2000);
+    if (yPosition >= 2050)
+      calculateCameraAngle(2500, 2000);
+    else
+      calculateCameraAngle(2500, 1500);
   break;
 
   case -6:
@@ -1109,7 +1120,10 @@ void autoMoveCamera() {
   break;
 
   case -7:
-    calculateCameraAngle(2000, 500);
+    if (xPosition >= 2050)
+      calculateCameraAngle(2000, 500);
+    else
+      calculateCameraAngle(1500, 500);
   break;
 
   case -8:
@@ -1126,45 +1140,97 @@ void autoMoveCamera() {
   case 2:
     if (yPosition <= 1450)
       calculateCameraAngle(2380, 1500); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
-    else
+    else if (yPosition <= 1900)
       calculateCameraAngle(2380, 2000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
+    else {
+      calculateCameraAngle(2000, 2500);
+      isRecognizing = false;
+    }
   break;
 
   case 3:
-    calculateCameraAngle(2000, 2500);
+    if (xPosition >= 2050)
+      calculateCameraAngle(2000, 2500);
+    else {
+      calculateCameraAngle(1500, 2500);
+      isRecognizing = false;
+    }
   break;
 
   case 4:
     if (xPosition >= 1650)
       calculateCameraAngle(1500, 2500);
-    else
+    else if (xPosition >= 1100)
       calculateCameraAngle(1000, 2500);
+    else {
+      calculateCameraAngle(500, 2000);
+      isRecognizing = false;
+    }
   break;
 
   case 5:
-    calculateCameraAngle(500, 2000);
+    if (yPosition >= 2050)
+      calculateCameraAngle(500, 2000);
+    else {
+      calculateCameraAngle(500, 1500);
+      isRecognizing = false;
+    }
   break;
 
   case 6:
     if (yPosition >= 1650)
       calculateCameraAngle(500, 1500);
-    else
+    else if (yPosition >= 1100)
       calculateCameraAngle(500, 1000);
+    else {
+      calculateCameraAngle(1000, 500);
+      isRecognizing = false;
+    }
   break;
 
   case 7:
-    calculateCameraAngle(1000, 500);
+    if (xPosition <= 950)
+      calculateCameraAngle(1000, 500);
+    else {
+      calculateCameraAngle(1500, 500);
+      isRecognizing = false;
+    }
   break;
 
   case 8:
     if (xPosition <= 1450)
       calculateCameraAngle(1500, 500);
-    else
+    else if (xPosition <= 1900)
       calculateCameraAngle(2000, 500);
+    else {
+      calculateCameraAngle(2380, 1000);
+      isRecognizing = false;
+    }
   break;
 
   case 1:
-    calculateCameraAngle(2380, 1000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
+    if (yPosition <= 950)
+      calculateCameraAngle(2380, 1000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
+    else
+      calculateCameraAngle(2380, 1500);
+      isRecognizing = false;
   break;
+  }
+}
+
+// enables camera when the total number of turns is less than 5 and sets the camera signatures to false
+void enableCamera() {
+  if (totalGiros < 5) {
+    firma1Detectada = firma2Detectada = false;
+    isRecognizing = true;
+    pitiditos(1);
+  }
+}
+
+void saveParkingPosition() {
+  if (distancia0 > 1500) {
+    parkingY = 1400;
+  } else {
+    parkingY = 1980;
   }
 }
