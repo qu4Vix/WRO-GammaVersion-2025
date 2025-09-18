@@ -81,6 +81,8 @@ enum e {
   EntradaFase1,
   EntradaFase2,
   EntradaFase3,
+  EntradaFase4,
+  Esperar,
   Prueba
 };
 uint8_t estado = e::Arrancar;
@@ -143,13 +145,15 @@ double yPosition = 0;
 
 double startXposition;
 double marcaPos;
+unsigned long marcaMillis;
+byte marcaEstado;
 
 // position PID controller variables
 
-#define positionKP 0.35  // different from phase 1 for some reason --------------------------------------------------------------------
+#define positionKP 0.25  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
-#define positonKPmagico 6 
-#define positionKPaparcar 5
+#define positonKPmagico 7.5
+#define positionKPaparcar 3.5
 #define positionKDaparcar 12.5 //Ajustar para que haga las maniobras bien, y todo el lio...
 float KPActual = positonKPmagico;
 float KDActual = positionKD;
@@ -265,6 +269,13 @@ void pitiditos(int num){
     delay(50);
     num--;
   }
+}
+
+void estadoEsperar(byte estadoObjetivo, uint16_t delay) {
+  pitiditos(1);
+  marcaMillis = millis() + delay;
+  marcaEstado = estadoObjetivo;
+  estado = e::Esperar;
 }
 
 void setup() {
@@ -545,23 +556,18 @@ void loop() {
     {
       setSpeed(0);
       delay(10);
-      estado = e::Reposicionar;
+      estadoEsperar(e::Reposicionar, 3000);
     }
   break;
   case e::Reposicionar:
-    if (!distancia0) {  // changed to check telemetry
-      distancia0 = readDistance(0);
-    }
-    else
+    distancia0 = readDistance(0);
+    if (distancia0)
     {
       setYcoord(distancia0);
       saveParkingPosition();
       KPActual = positionKP;
-      digitalWrite(pinLED_amarillo, HIGH);
-      if (!digitalRead(pinBoton)) {         // restore old version for competition ------------------------------
-        digitalWrite(pinLED_amarillo, LOW);
-        estado = e::Inicio;
-      }
+      estado = e::Inicio;
+      //estadoEsperar(e::Inicio, 15000);
     }
   break;
 
@@ -576,31 +582,31 @@ void loop() {
     if (yPosition >= parkingY)
     {
       setSpeed(0);
-      estado = e::Final;
-      /*
-      KPActual = positionKPaparcar;
-      KDActual = positionKDaparcar;
-      delay(15);
-      setSpeed(-StartSpeed);
-      objectivePosition = startXposition;
-      estado = e::EntradaFase2;*/
+      estadoEsperar(e::EntradaFase2, 500);
     }
   break;
   case e::EntradaFase2:
-    if (yPosition <= 1600-600*turnClockWise)
+    KPActual = positionKPaparcar;
+    KDActual = positionKDaparcar;
+    setSpeed(-StartSpeed);
+    objectivePosition = startXposition;
+    estado = e::EntradaFase3;
+  break;
+  case e::EntradaFase3:
+    if (yPosition <= 1650-500*turnClockWise)
     {
       KPActual = positionKP;
       KDActual = positionKD;
       setSpeed(0);
       /*
-      delay(15);
+      delay(50);
       marcaPos = yPosition;
       setSpeed(StartSpeed); // probably not necessary if we stop on point -----------------------------------------------------------
-      estado = e::EntradaFase3;*/
+      estado = e::EntradaFase4;*/
     }
   break;
-  case e::EntradaFase3:
-    if (yPosition >= marcaPos+25)
+  case e::EntradaFase4:
+    if (yPosition >= marcaPos+50)
     {
       setSpeed(0);
     }
@@ -612,6 +618,12 @@ void loop() {
   girar ruedas hacia el otro lado y volver hacia atras hasta que el angulo sea 0
   parar
   */
+
+  case e::Esperar:
+    if (millis() >= marcaMillis) {
+      estado = marcaEstado;
+    }
+  break;
   }
 }
 
@@ -724,7 +736,7 @@ uint16_t readDistance(uint16_t angle) {
   uint16_t f_distances[360];
   uint16_t f_distancesMillis[360];
   
-  
+  // copy the distances array to avoid writing what is being read
   for (int i = 0; i < 360; i++) {
     f_distances[i] = distances[i];
     f_distancesMillis[i] = distancesMillis[i];
@@ -771,7 +783,7 @@ void LidarTaskCode(void * pvParameters) {
       {
         angulo = 360 + angulo;
       }
-      else if (angulo > 360)
+      else if (angulo >= 360)
       {
         angulo -= 360;
       }
@@ -1086,55 +1098,81 @@ void autoMoveCamera() {
   case -2:
     if (yPosition <= 1450)
       calculateCameraAngle(600, 1500);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
-    else
+    else if (yPosition <= 1950)
       calculateCameraAngle(600, 2000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
+    else {
+      calculateCameraAngle(1000, 2500);
+      isRecognizing = false;
+    }
   break;
 
   case -3:
-    if (xPosition <= 950) 
+    if (xPosition <= 950)
       calculateCameraAngle(1000, 2500);
     else {
       calculateCameraAngle(1500, 2500);
+      isRecognizing = false;
     }
   break;
 
   case -4:
     if (xPosition <= 1450)
       calculateCameraAngle(1500, 2500);
-    else
+    else if (xPosition <= 1950)
       calculateCameraAngle(2000, 2500);
+    else {
+      calculateCameraAngle(2500, 2000);
+      isRecognizing = false;
+    }
   break;
 
   case -5:
     if (yPosition >= 2050)
       calculateCameraAngle(2500, 2000);
-    else
+    else {
       calculateCameraAngle(2500, 1500);
+      isRecognizing = false;
+    }
   break;
 
   case -6:
     if (yPosition >= 1650)
       calculateCameraAngle(2500, 1500);
-    else
+    else if (yPosition >= 1050)
       calculateCameraAngle(2500, 1000);
+    else {
+      calculateCameraAngle(2000, 500);
+      isRecognizing = false;
+    }
   break;
 
   case -7:
     if (xPosition >= 2050)
       calculateCameraAngle(2000, 500);
-    else
+    else {
       calculateCameraAngle(1500, 500);
+      isRecognizing = false;
+    }
   break;
 
   case -8:
     if (xPosition >= 1650)
       calculateCameraAngle(1500, 500);
-    else
+    else if (xPosition >= 1050)
       calculateCameraAngle(1000, 500);
+    else {
+      calculateCameraAngle(600, 1000);
+      isRecognizing = false;
+    }
   break;
 
   case -1:
-    calculateCameraAngle(600, 1000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
+    if (yPosition <= 950)
+      calculateCameraAngle(600, 1000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
+    else {
+      calculateCameraAngle(600, 1500);
+      isRecognizing = false;
+    }
   break;
 
   case 2:
@@ -1211,9 +1249,10 @@ void autoMoveCamera() {
   case 1:
     if (yPosition <= 950)
       calculateCameraAngle(2380, 1000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
-    else
+    else {
       calculateCameraAngle(2380, 1500);
       isRecognizing = false;
+    }
   break;
   }
 }
@@ -1223,14 +1262,13 @@ void enableCamera() {
   if (totalGiros < 5) {
     firma1Detectada = firma2Detectada = false;
     isRecognizing = true;
-    pitiditos(1);
   }
 }
 
 void saveParkingPosition() {
   if (distancia0 > 1500) {
-    parkingY = 1400;
+    parkingY = 1375;
   } else {
-    parkingY = 1980;
+    parkingY = 1935;
   }
 }

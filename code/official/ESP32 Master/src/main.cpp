@@ -43,7 +43,7 @@
 
 // Speeds
 #define StartSpeed 4
-#define CruisiereSpeed 8
+#define CruisiereSpeed 6
 #define NormalSpeed 5
 
 // Servo and direction variables
