@@ -82,6 +82,11 @@ enum e {
   EntradaFase2,
   EntradaFase3,
   EntradaFase4,
+  Aparcar1,
+  Aparcar2,
+  Aparcar3,
+  Aparcar35,
+  Aparcar4,
   Esperar,
   Prueba
 };
@@ -150,9 +155,9 @@ byte marcaEstado;
 
 // position PID controller variables
 
-#define positionKP 0.25  // different from phase 1 for some reason --------------------------------------------------------------------
+#define positionKP 0.35  // different from phase 1 for some reason --------------------------------------------------------------------
 #define positionKD 1
-#define positonKPmagico 7.5
+#define positonKPmagico 90
 #define positionKPaparcar 3.5
 #define positionKDaparcar 12.5 //Ajustar para que haga las maniobras bien, y todo el lio...
 float KPActual = positonKPmagico;
@@ -162,6 +167,7 @@ float positionError;
 float prev_positionError;
 bool fixXposition = true;
 bool fixInverted = true;
+bool pidEnabled = true;
 
 // trajectory management variables
 
@@ -374,8 +380,9 @@ void setup() {
   // set default first lane path to the inner one in order for the camera to look away from the block
   if (turnClockWise) arrayBloques[0] = arrayBloques[1] = GreenSignature;
   else arrayBloques[0] = arrayBloques[1] = RedSignature;
-  // set the objective position of the unparking
+  // set the objective position of the unparking and activate the PID
   objectivePosition = 2500-2000*turnClockWise;
+  pidEnabled = true;
   // start driving (set a speed to the car and initialize the mpu)
   setSpeed(StartSpeed);
   mimpu.measureFirstMillis();
@@ -404,7 +411,9 @@ void loop() {
       xPosition -= dx; // x -> + derecha - izquierda
       yPosition += dy;
     }
-    iteratePositionPID();
+    if (pidEnabled) {
+      iteratePositionPID();
+    }
     prev_ms_position = millis() + 32;
   }
 
@@ -515,14 +524,16 @@ void loop() {
   // repeat direction pid iterations every 20ms
   static uint32_t prev_ms_direction = millis();
   if (millis() > prev_ms_direction) {
-    actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
-    int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
-    if(_setAngle != prev_setAngle) {
-      setSteering(_setAngle * motionDirection);
-      prev_setAngle = _setAngle;
+    if (pidEnabled) {
+      actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
+      int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
+      if(_setAngle != prev_setAngle) {
+        setSteering(_setAngle * motionDirection);
+        prev_setAngle = _setAngle;
+      }
+      prev_directionError = actual_directionError;
+      prev_ms_direction = millis() + 20;
     }
-    prev_directionError = actual_directionError;
-    prev_ms_direction = millis() + 20;
   }
 
   // state machine
@@ -572,11 +583,11 @@ void loop() {
   break;
 
   case e::Posicionamiento:
-    objectivePosition = startXposition - 225*turnSense;
+    objectivePosition = startXposition - 255*turnSense;
     //KPActual = positionKP;
     isParking = true;
     setSpeed(StartSpeed);
-    estado = e::EntradaFase1;
+    estado = e::Aparcar1;
   break;
   case e::EntradaFase1:
     if (yPosition >= parkingY)
@@ -618,6 +629,41 @@ void loop() {
   girar ruedas hacia el otro lado y volver hacia atras hasta que el angulo sea 0
   parar
   */
+  
+  case e::Aparcar1:
+    if (yPosition >= 1370)
+    {
+      setSpeed(0);
+      pidEnabled = false;
+      estadoEsperar(e::Aparcar2, 500);
+    }
+  break;
+
+  case e::Aparcar2:
+    setSteering(-90*turnSense);
+    setSpeed(-StartSpeed);
+    estado = e::Aparcar3;
+  break;
+
+  case e::Aparcar3:
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 80) {
+      setSpeed(0);
+      estadoEsperar(e::Aparcar35, 200);
+    }
+  break;
+
+  case e::Aparcar35:
+    setSteering(90*turnSense);
+    setSpeed(-StartSpeed);
+    estado = e::Aparcar4;
+  break;
+
+  case e::Aparcar4:
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 5) {
+      setSpeed(0);
+      estado = e::Final;
+    }
+  break;
 
   case e::Esperar:
     if (millis() >= marcaMillis) {

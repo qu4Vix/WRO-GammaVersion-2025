@@ -10,23 +10,8 @@
 // Practice mode (Button desabled) for easy launches while testing
 #define PRACTICE_MODE true
 
-// Enables wifi functions when true
-#define ENABLE_WIFI false
 #define ENABLE_TELEMETRY true
 
-/*#if ENABLE_WIFI == true
-#include <OTAUpdate.h>
-#include <Telemetry.h>
-
-IPAddress receiversIP(192, 168, 0, 102);
-uint16_t receiversPort = 4210;
-uint16_t udpPort = 1234;
-uint16_t otaPort = 80;
-
-Updater miota(otaPort);
-TelemetryManager telemetry(receiversIP, receiversPort);
-#endif
-*/
 // Speeds
 #define StartSpeed 3
 #define CruisiereSpeed 10
@@ -237,15 +222,7 @@ void setup() {
   // set all the pin modes
   setPinModes();
   mimpu.SetDebugLedPin(pinLED_rojo);
-/*
-  #if ENABLE_WIFI == true
-    miota.WiFiInit();
-    miota.SetStaticIP(250);
-    miota.OTAInit();
-
-    telemetry.StartUDP(udpPort);
-  #endif
-*/
+  
   // configure the mpu
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
@@ -365,39 +342,9 @@ void loop() {
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
     }*/
-    /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
-    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
-      teleSerial.write(0xAA);
-    }
-    teleSerial.write(03);
-    uint16_t pi=0;
-    while (pi < 360){
-        teleSerial.write(distancesArray[1][pi]);
-        pi++;
-    }*/
 
     /*ENVIAMOS PAQUETE TIPO 5 INFORMACION GENERAL*/
-                /*
-            --Posicion x 8 bytes
-            --Posición y 8 bytes
-            --Posición x Objetivo 8 bytes
-            --Posición y Objetivo 8 bytes
-            --Encoder 32 uint32
-            --Estado 8bits  uint
-            --batería 8bits uint
-            --Ángulo 16 float
-            --Angulo Objetivo 16 float
-            --Cámara firma1 Detectada 1 byte
-            --Cámara firma1 x 8 bits
-            --Cámara firma1 y 8 bits
-            --Cámara firma2 Detectada 1byte
-            --ArrayTramo      8 bytes
-            --tramo           1 byte
-            
-            |XXXX|YYYY|MMMM|NNNN|QQQQ|W|E|RRRR|TTTT|U|I|O|A|S|D|arrayTramo|tramo
-             0000 0000 0111 1111 1112 2 2 2222 2223 3 3 3 3 3 3 33344444   4
-             1234 5678 9012 3456 7890 1 2 3456 7890 1 2 3 4 5 6 78901234   5
-            */
+    
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
