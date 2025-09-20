@@ -11,6 +11,8 @@
  * 
  * AdvancedMPU.h - Library for controling a MPU9250 and getting the overall angle with Arduino Framework.
  * 
+ * Created by the Gamma Version Team, 2025
+ * 
 ****************************************************/
 
 #include "AdvancedMPU.h"
