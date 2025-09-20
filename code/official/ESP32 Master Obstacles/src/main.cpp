@@ -385,7 +385,7 @@ void setup() {
   pidEnabled = true;
   // start driving (set a speed to the car and initialize the mpu)
   setSpeed(StartSpeed);
-  mimpu.measureFirstMillis();
+  mimpu.MeasureFirstMicros();
 }
 
 void loop() {
@@ -1096,7 +1096,7 @@ void changeDrivingDirection() {
         turnSense *= -1;
         turnClockWise = !turnClockWise;
         tramo = 1;
-        mimpu.addAngle(900*turnSense);
+        mimpu.AddAngle(900*turnSense);
         giros = 0;
         uint8_t colorBlocks[8];
         for (uint8_t i = 0; i<8; i++) {
