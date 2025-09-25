@@ -69,7 +69,7 @@ To bring our autonomous car project to fruition, we opted for the ESP-32 microco
 
 3. Sensor and Actuator Compatibility: The ESP-32's adaptability extends to sensor and actuator integration. With its multitude of I/O (input/output) pins and versatile interface options, we effortlessly connected and controlled various sensors, including the IMU and LiDAR, as well as the steering servos.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/ESP32%20Pin%20out.jpg?raw=true" width="600">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/robot-info/Diagrams/ESP32-DOIT-DEV-KIT-v1-pinout.png?raw=true" width="600">
 
 We integrated two ESP32s into our robot, as it was necessary due to the large amount of information they must analyze from all the sensors and the decisions they must make. For this purpose, we call one ESP32 "Slave," to which several sensors are connected. After analyzing this information, it sends it to another ESP32, which we call "Master." Other sensors are connected to this ESP32, and it is responsible for executing all the movement commands.
 
