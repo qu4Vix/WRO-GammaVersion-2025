@@ -35,7 +35,7 @@
 // ***** ESTABLISHING DEFINES *****
 
 // Practice mode (Button desabled) for easy launches while testing
-#define PRACTICE_MODE true
+#define PRACTICE_MODE false
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false       // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
@@ -427,11 +427,12 @@ void loop() {
       decideTurn();
       if (yPosition >= 2400) {
         setSpeed(0);
-        if (turnSense != 0) {
+      }
+      if (turnSense != 0) {
           digitalWrite(pinLED_rojo, LOW);
           digitalWrite(pinLED_verde, HIGH);
           digitalWrite(pinBuzzer, HIGH);
-          setXcoord(readDistance(270));
+          //setXcoord(readDistance(270));
           objectivePosition = xPosition;
           vTaskDelete(Task1);
           analogWrite(pinLIDAR_motor, 0);
@@ -439,7 +440,6 @@ void loop() {
           setSpeed(CruisiereSpeed);
           digitalWrite(pinBuzzer, LOW);
         }
-      }
     }
   break;
   case e::Recto:
@@ -738,10 +738,12 @@ void decideTurn() {
   if (distancia90 > distancia270 && distancia90 > 1000)
   {
     turnSense = -1;
+    setXcoord(mapSize - distancia90);
   }
   else if (distancia270 > distancia90 && distancia270 > 1000)
   {
     turnSense = 1;
+    setXcoord(distancia270);
   }
   else turnSense = 0;
 }
