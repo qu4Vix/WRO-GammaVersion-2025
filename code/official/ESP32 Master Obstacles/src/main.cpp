@@ -30,7 +30,7 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 // Speeds
 #define StartSpeed 2
 #define CruisiereSpeed 5
-#define NormalSpeed 3
+#define NormalSpeed 4
 
 /*
  *  Speed infromation
@@ -155,8 +155,8 @@ byte marcaEstado;
 
 // position PID controller variables
 
-#define positionKP 0.35  // different from phase 1 for some reason --------------------------------------------------------------------
-#define positionKD 1
+#define positionKP 0.4  // different from phase 1 for some reason --------------------------------------------------------------------
+#define positionKD 4
 #define positonKPmagico 90
 #define positionKPaparcar 3.5
 #define positionKDaparcar 12.5 //Ajustar para que haga las maniobras bien, y todo el lio...
@@ -385,7 +385,7 @@ void setup() {
   pidEnabled = true;
   // start driving (set a speed to the car and initialize the mpu)
   setSpeed(StartSpeed);
-  mimpu.measureFirstMillis();
+  mimpu.MeasureFirstMicros();
 }
 
 void loop() {
@@ -631,7 +631,7 @@ void loop() {
   */
   
   case e::Aparcar1:
-    if (yPosition >= 1370)
+    if (yPosition >= 1370 + 530 - 530*turnClockWise)
     {
       setSpeed(0);
       pidEnabled = false;
@@ -1096,7 +1096,7 @@ void changeDrivingDirection() {
         turnSense *= -1;
         turnClockWise = !turnClockWise;
         tramo = 1;
-        mimpu.addAngle(900*turnSense);
+        mimpu.AddAngle(900*turnSense);
         giros = 0;
         uint8_t colorBlocks[8];
         for (uint8_t i = 0; i<8; i++) {
@@ -1125,7 +1125,9 @@ void moveCamera(int8_t angle) {
 int atan3(double _dx, double dy) {
   double dx = _dx * turnSense;
   int beta = 180 / M_PI * atan(-dx / dy);
-  if (dy > 0 && dx < 0) return beta;
+  if (dy > 0 && dx < 0 && totalGiros == 4) return beta + 360;
+  else if (dy > 0 && dx < 0) return beta;
+  else if (dy > 0 && dx > 0 && totalGiros < 2) return beta;
   else if (dy > 0 && dx > 0) return beta + 360;
   else if (dy < 0) return beta + 180; // here we get angles between 90 and 270
   else if (dy == 0 && dx > 0) return -90; // angle decreases in the clockwise (positive x) direction

@@ -24,8 +24,6 @@
 #include <Arduino.h>
 #include <AdvancedMPU.h>
 #include <RPLidar.h>
-#include <melody_factory.h>
-#include <melody_player.h>
 #include "pinAssignments.h"
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
@@ -51,8 +49,8 @@
 #define servoKD 0
 
 // position PID controller variables
-#define positionKP 0.1
-#define positionKD 1
+#define positionKP 0.35
+#define positionKD 2.5
 
 
 
@@ -113,35 +111,6 @@ HardwareSerial commSerial(1);
 TaskHandle_t Task1;
 HardwareSerial teleSerial(0);
 
-// Music
-MelodyPlayer player(pinBuzzer, HIGH);
-const uint8_t nNotes = 45;
-String notes1[nNotes] = 
-{
-  "A4", "E5", "SILENCE",    "A4", "E5", "SILENCE",    "B4", "E5", "SILENCE",    "B4", "E5", "SILENCE",
-  "C4", "E5", "SILENCE",    "C4", "E5", "SILENCE",    "D4", "E5", "SILENCE",    "D4", "E5", "B4",
-  "A4", "E5", "SILENCE",    "A4", "E5", "SILENCE",    "B4", "E5", "SILENCE",    "B4", "E5", "SILENCE",
-  "C4", "E5", "SILENCE",    "C4", "E5", "SILENCE",    "D4", "E5", "SILENCE"
-};
-const uint16_t timeUnit = 625;
-// Create a melody
-Melody melody1 = MelodyFactory.load("Cornfield chase", timeUnit, notes1, nNotes);
-String notes2[9] = {"D4", "D4", "D4", "D4", "E5", "E5", "E5", "E5", "B4"};
-Melody melody2 = MelodyFactory.load("Cornfield chase 2", 156, notes2, 9);
-String notes3[60] =
-{
-  "A4", "C4", "E5", "A5",   "A4", "C4", "E5", "A5",   "A4", "C4", "E5", "A5",
-  "B4", "D4", "E5", "B5",   "B4", "D4", "E5", "B5",   "B4", "D4", "E5", "B5",
-  "B4", "D4", "E5", "B5",   "B4", "D4", "E5", "B5",   "B4", "D4", "E5", "B5",
-  "A4", "C4", "E5", "A5",   "G3", "B4", "E5", "F5",   "A4", "C4", "E5", "A5",
-  "B4", "D4", "E5", "B5",   "A4", "C4", "E5", "A5",   "G3", "B4", "E5", "F5"
-};
-Melody melody3 = MelodyFactory.load("Cornfield chase 3", 156, notes3, 60);
-String notes4[18] =
-{
-  "A5", "E6", "A5",   "A5", "E6", "A5",   "B5", "E6", "B5",   "B5", "E6", "B5",   "C5", "E6", "C5",   "C5", "E6", "C5"
-};
-Melody melody4 = MelodyFactory.load("Cornfield chase 4", 625, notes4, 18);
 
 u_int16_t distancia90;
 u_int16_t distancia270;
@@ -191,9 +160,19 @@ void setup() {
   // Begin ESP32 Master-Slave intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
+  for (int i = 0; i<4; i++) {   //Enviamos la cabecera de inicio de paquete
+    teleSerial.write(0xAA);
+  }
+  teleSerial.write(01);
+  for (int i=0; i<8; i++) {
+      teleSerial.write(1);
+  }
+  teleSerial.write(rtc_get_reset_reason(0));
+  teleSerial.write(rtc_get_reset_reason(1));
+
   // Set all the pin modes
   setPinModes();
-  digitalWrite(pinBuzzer, HIGH);
+  //digitalWrite(pinBuzzer, HIGH);
 
   // WIFI IS NOT USED
   #if ENABLE_WIFI == true
@@ -228,7 +207,7 @@ void setup() {
     0);
 
   delay(500);
-  digitalWrite(pinBuzzer, LOW);
+  //digitalWrite(pinBuzzer, LOW);
 
   // Start LIDAR's motor rotating at max allowed speed
   analogWrite(pinLIDAR_motor, 255);
@@ -390,6 +369,7 @@ void loop() {
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
     enviarDato((byte*)&tramo,sizeof(tramo));
+    enviarDato(0,1);enviarDato(0,1);
     enviarDato((byte*)&distancia90,sizeof(distancia90));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
     
@@ -423,7 +403,6 @@ void loop() {
   {
   case e::Inicio:   // Start position
     if (yPosition >= 1500) {
-      digitalWrite(pinLED_rojo, HIGH);
       decideTurn();
       if (yPosition >= 2400) {
         setSpeed(0);
@@ -438,7 +417,6 @@ void loop() {
           analogWrite(pinLIDAR_motor, 0);
           estado = e::Recto;
           setSpeed(CruisiereSpeed);
-          digitalWrite(pinBuzzer, LOW);
         }
     }
   break;
