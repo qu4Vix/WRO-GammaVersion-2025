@@ -1,11 +1,28 @@
+/***************************************************
+ * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
+ * 
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
+ * 
+****************************************************/
+
+/***************************************************
+ * 
+ * We can find here the different pin assignments for the Master ESP32.
+ * Additionally, a setPinModes function has been created to initialise the GPIOs easily.
+ * 
+****************************************************/
+
 // LED pins
 #define pinLED_rojo 12
-#define pinLED_verde 13
+#define pinLED_amarillo 13
 
 // Battery level LED pins
 #define pinLED_batRojo 25
 #define pinLED_batAmarillo 26
 #define pinLED_batVerde 27
+
 
 // buzzer
 #define pinBuzzer 32
@@ -34,10 +51,10 @@
 void setPinModes() {
     pinMode(pinBoton, INPUT_PULLUP);
     pinMode(pinLED_rojo, OUTPUT);
-    pinMode(pinLED_verde, OUTPUT);
+    pinMode(pinLED_amarillo, OUTPUT);
     pinMode(pinLED_batRojo, OUTPUT);
     pinMode(pinLED_batAmarillo, OUTPUT);
     pinMode(pinLED_batVerde, OUTPUT);
-    pinMode(pinBuzzer, OUTPUT);
     pinMode(pinLIDAR_motor, OUTPUT);
+    pinMode(pinBuzzer, OUTPUT);
 }

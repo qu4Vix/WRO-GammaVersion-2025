@@ -9,7 +9,8 @@
 
 /***************************************************
  * 
- * We can find here the different pin assignments.
+ * We can find here the different pin assignments for the Slave ESP32.
+ * Additionally, a setPinModes function has been created to initialise the GPIOs easily.
  * 
 ****************************************************/
 

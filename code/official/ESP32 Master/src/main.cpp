@@ -241,7 +241,7 @@ void setup() {
 
   // Starts driving (set a speed to the car and initialize the IMU MPU)
   setSpeed(StartSpeed);
-  mimpu.measureFirstMillis();
+  mimpu.MeasureFirstMicros();
 }
 
 
