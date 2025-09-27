@@ -44,7 +44,7 @@
 #if ROUND_NUMBER == 2 
 #define TAMANO_MINIMO_ESQUIVE 20  // This is not used right now, but it is kept just in case we need it
 #define ALTURA_MINIMA_ESQUIVE 40  // This is not used right now, but it is kept just in case we need it
-#define MinRatioForBlock 1        // THIS IS THE MINIMUM HEIGH/WIDH RATIO NEEDED TO DETECT A BLOCK. This is part of a system to avoid detecting the orange line as a red block
+#define MinRatioForBlock 1.5        // THIS IS THE MINIMUM HEIGH/WIDH RATIO NEEDED TO DETECT A BLOCK. This is part of a system to avoid detecting the orange line as a red block
 #endif
 
 
@@ -69,7 +69,7 @@ void sendEncoder(uint32_t encoder);
 void sendVoltage(uint8_t batteryLevel);
 void sendResetReason();
 void updateBattery();
-void calculateNearestBlockAndSendCamera ();
+void calculateNearestBlockMultipleDetectionsAndSendCamera ();
 #if ROUND_NUMBER == 2
 void sendCamera(uint8_t signature, uint16_t x, uint16_t y);
 #endif
@@ -162,7 +162,7 @@ void loop() {
   static uint32_t prev_ms_camera = millis();
   if (millis() > prev_ms_camera) {
     Husky.requestBlocksLearned();
-    calculateNearestBlockAndSendCamera();
+    calculateNearestBlockMultipleDetectionsAndSendCamera();
     prev_ms_camera = millis() + 100;
   }
   #endif
@@ -258,9 +258,9 @@ void updateBattery() {
   }
 }
 
-// This function looks for the nearest block and sents back its information (position and ID). This code is made to avoid confusion with the orange line of the board or the parking walls 
+// This function looks for the nearest block and sends back its information (position and ID). This code is made to avoid confusion with the orange line of the board or the parking walls 
 #if ROUND_NUMBER == 2
-void calculateNearestBlockAndSendCamera (){
+void calculateNearestBlockMultipleDetectionsAndSendCamera (){
   int16_t numberOfBlocks = Husky.countBlocksLearned();
 
   int16_t blocksIndexNumber[numberOfBlocks];
@@ -269,6 +269,8 @@ void calculateNearestBlockAndSendCamera (){
 
   int16_t maxHeightIndex = -1;
   int16_t maxHeight = -1;
+
+  int ourID; 
 
   // Because the camera detects all blocks and doesn't tell us which is closer, we first read all of them and put their information in this three arrays
   for (int i = 0; i < numberOfBlocks; i++)
@@ -296,7 +298,15 @@ void calculateNearestBlockAndSendCamera (){
   {
   }else{
     fHusky = Husky.getBlockLearned(maxHeightIndex);
-    sendCamera(fHusky.ID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));  // We use this rule of three to adapt it to an older version of this code
+    
+    if((fHusky.ID >= 1) && (fHusky.ID <=4))
+    {
+      ourID = 1;
+    } else {
+      ourID = 2;
+    }
+    
+    sendCamera(ourID, ((315*fHusky.xCenter)/320), ((207*fHusky.yCenter)/240));  // We use this rule of three to adapt it to an older version of this code
   }
 }
 #endif
