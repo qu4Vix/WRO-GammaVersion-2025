@@ -1,0 +1,2 @@
+This folder is used to make tests in the native enviroment, which is c++. This is to avoid flashing the ESP32 when trying to test logic and algorithms.
+test_ransac tests the ransac algorithm given a data set.

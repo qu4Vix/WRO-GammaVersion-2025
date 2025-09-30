@@ -14,6 +14,8 @@ struct lidarMeasurement
   uint16_t angle;
 };
 
+lidarMeasurement lidarBuffer[365];
+uint16_t measurementsIndex = 0;
 
 float distances[360];
 unsigned long times[360];
@@ -88,8 +90,10 @@ void Task1Code(void * pvParameters) {
       if (IS_OK(lidar.waitPoint())) {
         float distance = lidar.getCurrentPoint().distance; //distance value in mm unit
         float angle    = lidar.getCurrentPoint().angle; //anglue value in degree
-        //bool  startBit = lidar.getCurrentPoint().startBit; //whether this point is belong to a new scan
-
+        bool  startBit = lidar.getCurrentPoint().startBit; //whether this point is belong to a new scan
+        if (startBit) {
+          
+        }
         writing = true;
         //distances[uint16_t(angle)] = distance;
         uint16_t index = getIndex(angle);
