@@ -1,6 +1,10 @@
 {
     "files.associations": {
         "new": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp"
     }
 }

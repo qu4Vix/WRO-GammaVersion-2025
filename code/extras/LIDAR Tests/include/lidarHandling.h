@@ -47,9 +47,9 @@ void lidarStorage::addMeasurements(lidarMeasurement measurement) {
 }
 
 Point2D * lidarStorage::convertToCartesian() {
-  for (unsigned int i = 0; i < _size; i++) {
-    cartesianData[i].x = _data[i].radius * cos(_data[i].angle * M_PI / 180);
-    cartesianData[i].y = _data[i].radius * sin(_data[i].angle * M_PI / 180);
+  for (uint16_t i = 0; i < _size; i++) {
+    cartesianData[i].x = _data[i].radius * sin(_data[i].angle * M_PI / 180);  // The angle is given with respect to the positive y axis, hence, angle=0 lies on the y positive axis
+    cartesianData[i].y = _data[i].radius * cos(_data[i].angle * M_PI / 180);  // So x = r * sin(0) and y = r * cos(0)
   }
   return cartesianData;
 }
