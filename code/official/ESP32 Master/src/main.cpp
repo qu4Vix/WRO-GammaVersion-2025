@@ -33,7 +33,7 @@
 // ***** ESTABLISHING DEFINES *****
 
 // Practice mode (Button desabled) for easy launches while testing
-#define PRACTICE_MODE false
+#define PRACTICE_MODE true
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false       // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
@@ -64,7 +64,7 @@ float objectiveDirection;
 uint8_t bateria;
 
 // Conversion between mm and encoder counts
-#define MMperEncoder 1.41
+#define MMperEncoder 1.517
 
 // List of possible states for the car
 enum e {
@@ -147,6 +147,7 @@ void checkTurn();             // check wether you have to turn or not
 // This code will only run once, just after turning on the ESP32
 
 void setup() {
+  digitalWrite(pinLED_rojo, LOW);
   
   //THIS IS ONLY USED FOR DEBUG PURPOSES AND NOT DURING THE MATCH
   #if ENABLE_TELEMETRY == true
@@ -227,7 +228,7 @@ void setup() {
   prev_encoderMeasurement = encoderMeasurement;
   #else
   // Waits until the start button is pressed
-  digitalWrite(pinLED_verde, HIGH);
+  digitalWrite(pinLED_amarillo, HIGH);
   while (digitalRead(pinBoton)) {
     while (commSerial.available())
     {
@@ -235,13 +236,16 @@ void setup() {
     }
   }
   prev_encoderMeasurement = encoderMeasurement;
-  digitalWrite(pinLED_verde, LOW);
+  digitalWrite(pinLED_amarillo, LOW);
   #endif
   delay(1000);
 
   // Starts driving (set a speed to the car and initialize the IMU MPU)
   setSpeed(StartSpeed);
   mimpu.MeasureFirstMicros();
+
+  //-----------------------------------------------------------------------------------------------
+  estado = e::Inicio;
 }
 
 
@@ -369,7 +373,7 @@ void loop() {
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
     enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
     enviarDato((byte*)&tramo,sizeof(tramo));
-    enviarDato(0,1);enviarDato(0,1);
+    //enviarDato(0,1);enviarDato(0,1);
     enviarDato((byte*)&distancia90,sizeof(distancia90));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
     
@@ -408,9 +412,9 @@ void loop() {
         setSpeed(0);
       }
       if (turnSense != 0) {
-          digitalWrite(pinLED_rojo, LOW);
-          digitalWrite(pinLED_verde, HIGH);
-          digitalWrite(pinBuzzer, HIGH);
+          //digitalWrite(pinLED_rojo, LOW);
+          digitalWrite(pinLED_amarillo, HIGH);
+          //digitalWrite(pinBuzzer, HIGH);
           //setXcoord(readDistance(270));
           objectivePosition = xPosition;
           vTaskDelete(Task1);

@@ -67,7 +67,7 @@ uint8_t firma2X = 20;
 uint8_t firma2Y = 21;
 
 // conversion between mm and encoder counts
-#define MMperEncoder 1.41
+#define MMperEncoder 1.517
 
 // List of possible states for the car
 enum e {
