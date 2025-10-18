@@ -8,7 +8,7 @@
 #include <esp_task_wdt.h>
 
 // Practice mode (Button desabled) for easy launches while testing
-#define PRACTICE_MODE false
+#define PRACTICE_MODE true
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
@@ -28,9 +28,9 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 #endif
 */
 // Speeds
-#define StartSpeed 2
-#define CruisiereSpeed 5
-#define NormalSpeed 4
+#define StartSpeed 4
+#define CruisiereSpeed 8
+#define NormalSpeed 7
 
 /*
  *  Speed infromation
@@ -67,7 +67,7 @@ uint8_t firma2X = 20;
 uint8_t firma2Y = 21;
 
 // conversion between mm and encoder counts
-#define MMperEncoder 1.517
+#define MMperEncoder 1.543
 
 // List of possible states for the car
 enum e {

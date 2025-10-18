@@ -33,7 +33,7 @@
 // ***** ESTABLISHING DEFINES *****
 
 // Practice mode (Button desabled) for easy launches while testing
-#define PRACTICE_MODE true
+#define PRACTICE_MODE false
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false       // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
@@ -41,8 +41,8 @@
 
 // Speeds
 #define StartSpeed 4
-#define CruisiereSpeed 6
-#define NormalSpeed 5
+#define CruisiereSpeed 8
+#define NormalSpeed 7
 
 // Servo and direction variables
 #define servoKP 2.5
@@ -64,7 +64,7 @@ float objectiveDirection;
 uint8_t bateria;
 
 // Conversion between mm and encoder counts
-#define MMperEncoder 1.517
+#define MMperEncoder 1.543
 
 // List of possible states for the car
 enum e {
@@ -85,8 +85,8 @@ int8_t turnSense = 0;       // We don't know it at the beginning
 int8_t motionDirection = 0; // The car doesn't move at the beginning
 
 // Encoder variables
-int32_t encoderMeasurement;
-int32_t prev_encoderMeasurement;
+u_int32_t encoderMeasurement;
+u_int32_t prev_encoderMeasurement;
 
 // Lidar measurement variables
 uint16_t distances[360];
@@ -245,6 +245,7 @@ void setup() {
   mimpu.MeasureFirstMicros();
 
   //-----------------------------------------------------------------------------------------------
+  setSpeed(StartSpeed);
   estado = e::Inicio;
 }
 
@@ -263,14 +264,15 @@ void loop() {
 
   // Update IMU MPU's angle
   mimpu.UpdateAngle();
-
+  //test
   // Repeat position functions every 32ms
   static uint32_t prev_ms_position = millis();
   if (millis() > prev_ms_position) {
     if (encoderMeasurement != prev_encoderMeasurement) {
       // Calculate the increment in position and add it
-      double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-      double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      int16_t encoderINcrement = encoderMeasurement - prev_encoderMeasurement;
+      double dy = (encoderINcrement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      double dx = (encoderINcrement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       prev_encoderMeasurement = encoderMeasurement;
       xPosition -= dx; // x -> + right - left
       yPosition += dy;
@@ -437,6 +439,7 @@ void loop() {
   //Caso prueba para probar el encoder y calcular MMperEncoder
   case e::Prueba:
     if (yPosition >= 3000) setSpeed(0);
+  break;
   }
 }
 

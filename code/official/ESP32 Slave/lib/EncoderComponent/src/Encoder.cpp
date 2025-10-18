@@ -46,7 +46,7 @@ void Encoder::_updateEncoder() {
     }
 }
 
-long Encoder::GetEncoder() {
+unsigned long Encoder::GetEncoder() {
     return _encoderTotal;
 }
 

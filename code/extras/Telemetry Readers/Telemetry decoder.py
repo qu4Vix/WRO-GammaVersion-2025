@@ -1,6 +1,6 @@
 import socket
 
-LOCAL_UDP_IP = "192.168.1.141"
+LOCAL_UDP_IP = "192.168.144.235"
 SHARED_UDP_PORT = 5007
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet  # UDP
 sock.bind((LOCAL_UDP_IP, SHARED_UDP_PORT))
@@ -134,7 +134,7 @@ def parse_packet(receivedBytes):
                 'PosicionY': PosicionY,
                 'PosicionXObjetivo': PosicionXObjetivo,
                 'PosicionYObjetivo': PosicionYObjetivo,
-                'Encoder': Encoder-2048,
+                'Encoder': Encoder-8192,
                 'Estado': Estado,
                 'Bateria': Bateria,
                 'Angulo': angulo,
