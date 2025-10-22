@@ -1,35 +1,38 @@
 #include <Arduino.h>
 #include <RPLidar.h>
 
+#include "ransacAlgorithm.h"
+#include "lidarHandling.h"
+
 #define PIN_LIDAR_MOTOR 5 // The PWM pin for control the speed of RPLIDAR's motor.
+#define PIN_Buzzer 32
 
 HardwareSerial lidarSerial(2);
 RPLidar lidar;
 
 TaskHandle_t Task1;
 
-struct lidarMeasurement
-{
-  uint16_t radius;
-  uint16_t angle;
-};
-
 lidarMeasurement lidarBuffer[365];
 uint16_t measurementsIndex = 0;
-
-float distances[360];
-unsigned long times[360];
+lidarStorage * pStorage;
 
 bool reading = false;
 bool writing = false;
 
-uint16_t getIndex(float angle);
+uint16_t blockPositions[2][12][2] = {
+  // Clockwise
+  {
+    {}
+  }
+};
+
 void Task1Code(void * pvParameters);
 float readDistance(uint16_t angle);
 
 // put your setup code here, to run once:
 void setup() {
   pinMode(PIN_LIDAR_MOTOR, OUTPUT);
+  pinMode(PIN_Buzzer, OUTPUT);
 
   Serial.begin(115200);
   lidar.begin(lidarSerial);
@@ -57,25 +60,10 @@ void loop() {
   // Send data every 25000ms
   static uint32_t prev_ms = millis();
   if (millis() > prev_ms) {
-    if (!writing) {
-      reading = true;
-      for (int i = 0; i < 360; i++) {
-        Serial.println("Angle: " + String(i) + " , Distance: " + readDistance(i));
-        delay(5);
-      }
-      reading = false;
-      prev_ms = millis() + 25000;
-    }
-  }
-}
-
-uint16_t getIndex(float angle) {
-  if (angle >= 359.5) return 0;
-  float error = angle - uint16_t(angle);
-  if (error < 0.5) {
-    return uint16_t(angle);
-  } else {
-    return uint16_t(angle + 1);
+    unsigned long ms = millis();
+    float distance = readDistance(0);
+    Serial.println("Distance: " + String(distance) + ",    Millis: " + String(millis() - ms));
+    prev_ms = millis() + 5000;
   }
 }
 
@@ -88,18 +76,20 @@ void Task1Code(void * pvParameters) {
     if (reading);
     else {
       if (IS_OK(lidar.waitPoint())) {
-        float distance = lidar.getCurrentPoint().distance; //distance value in mm unit
-        float angle    = lidar.getCurrentPoint().angle; //anglue value in degree
+        double distance = lidar.getCurrentPoint().distance; //distance value in mm unit
+        double angle    = lidar.getCurrentPoint().angle; //anglue value in degree
         bool  startBit = lidar.getCurrentPoint().startBit; //whether this point is belong to a new scan
         if (startBit) {
-          
+          writing = true;
+          pStorage->~lidarStorage();
+          pStorage = new lidarStorage(measurementsIndex);
+          pStorage->setArray(lidarBuffer, measurementsIndex);
+          measurementsIndex = 0;
+          writing = false;
         }
-        writing = true;
-        //distances[uint16_t(angle)] = distance;
-        uint16_t index = getIndex(angle);
-        distances[index] = distance;
-        times[index] = millis();
-        writing = false;
+        // store the new measurement in the buffer (range and bearing, the angle between 180 and -180 for easy substractions)
+        lidarBuffer[measurementsIndex] = lidarMeasurement{distance, (angle > 180)?(angle - 360):angle};
+        measurementsIndex++;
       }
     }
   }
@@ -107,9 +97,16 @@ void Task1Code(void * pvParameters) {
 
 // Angle from 0 to 359
 float readDistance(uint16_t angle) {
-  //while (writing);
-  //reading = true;
-  float distanceMeasure = distances[angle];
-  //reading = false;
+  while (writing);
+  Line2D lines[MAX_LANDMARKS];
+  reading = true;
+  int output = exeRANSAC(pStorage, lines);
+  reading = false;
+  if (output == -1) {
+    digitalWrite(PIN_Buzzer, HIGH);
+    return 0;
+  }
+  float distanceMeasure = DistanceToLine(lines[0], Point2D{0,0});
+  
   return distanceMeasure;
 }

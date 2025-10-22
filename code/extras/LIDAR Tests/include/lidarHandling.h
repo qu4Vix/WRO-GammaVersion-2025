@@ -3,47 +3,53 @@
 
 //#include "Arduino.h"
 //#include "RPLidar.h"
-#include "ransacAlgorithm.h"
-
-// Measurement of the lidar given by range and bearing
-struct lidarMeasurement
-{
-  double radius;
-  double angle;
-};
+#include "lidarDataTypes.h"
+#include <cstring>
 
 class lidarStorage {
-    public:
-        lidarStorage(uint16_t size);
-        ~lidarStorage();
-        void addMeasurements(double radius, double angle);
-        void addMeasurements(lidarMeasurement measurement);
-        Point2D * convertToCartesian();
-    private:
-        Point2D * cartesianData;
-        uint16_t index = 0;
-        uint16_t _size;
-        lidarMeasurement * _data;
+  public:
+    lidarStorage(uint16_t size);
+    ~lidarStorage();
+    void addMeasurements(double radius, double angle);
+    void addMeasurements(lidarMeasurement measurement);
+    void setArray(lidarMeasurement * array, uint16_t size);
+    inline uint16_t getSize();
+    Point2D * convertToCartesian();
+    inline lidarMeasurement getMeasurement(uint16_t index);
+  private:
+    Point2D * cartesianData;
+    uint16_t index = 0;
+    uint16_t _size;
+    lidarMeasurement * _data;
 };
 
 lidarStorage::lidarStorage(uint16_t size) : _size(size) {
-    _data = new lidarMeasurement[_size];
-    cartesianData = new Point2D[_size];
+  _data = new lidarMeasurement[_size];
+  cartesianData = new Point2D[_size];
 }
 
 lidarStorage::~lidarStorage() {
-    delete[] _data;
+  delete[] _data;
+  delete[] cartesianData;
 }
 
 void lidarStorage::addMeasurements(double radius, double angle) {
-    _data[index].radius = radius;
-    _data[index].angle = angle;
-    index++;
+  _data[index].radius = radius;
+  _data[index].angle = angle;
+  index++;
 }
 
 void lidarStorage::addMeasurements(lidarMeasurement measurement) {
-    _data[index] = measurement;
-    index++;
+  _data[index] = measurement;
+  index++;
+}
+
+void lidarStorage::setArray(lidarMeasurement * array, uint16_t size) {
+  memcpy(_data, array, size * sizeof(lidarMeasurement));
+}
+
+inline uint16_t lidarStorage::getSize() {
+  return this->_size;
 }
 
 Point2D * lidarStorage::convertToCartesian() {
@@ -54,15 +60,10 @@ Point2D * lidarStorage::convertToCartesian() {
   return cartesianData;
 }
 
-uint16_t getIndex(float angle) {
-  if (angle >= 359.5) return 0;
-  float error = angle - uint16_t(angle);
-  if (error < 0.5) {
-    return uint16_t(angle);
-  } else {
-    return uint16_t(angle + 1);
-  }
+inline lidarMeasurement lidarStorage::getMeasurement(uint16_t index) {
+  return _data[index];
 }
+
 
 /*
 lidarStorage * pStorage;

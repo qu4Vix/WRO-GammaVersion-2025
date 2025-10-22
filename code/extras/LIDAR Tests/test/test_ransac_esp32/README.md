@@ -1,0 +1,1 @@
+This folder contains code to test the RANSAC algorithm on the ESP32, to do efficiency, speed and resoursce consume.
