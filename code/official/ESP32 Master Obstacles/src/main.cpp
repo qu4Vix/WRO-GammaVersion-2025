@@ -30,7 +30,7 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 // Speeds
 #define StartSpeed 2
 #define CruisiereSpeed 5
-#define NormalSpeed 4
+#define NormalSpeed 3
 
 /*
  *  Speed infromation
@@ -155,8 +155,8 @@ byte marcaEstado;
 
 // position PID controller variables
 
-#define positionKP 0.4  // different from phase 1 for some reason --------------------------------------------------------------------
-#define positionKD 4
+#define positionKP 0.35  // different from phase 1 for some reason --------------------------------------------------------------------
+#define positionKD 1
 #define positonKPmagico 90
 #define positionKPaparcar 3.5
 #define positionKDaparcar 12.5 //Ajustar para que haga las maniobras bien, y todo el lio...
@@ -385,7 +385,7 @@ void setup() {
   pidEnabled = true;
   // start driving (set a speed to the car and initialize the mpu)
   setSpeed(StartSpeed);
-  mimpu.MeasureFirstMicros();
+  mimpu.measureFirstMillis();
 }
 
 void loop() {
@@ -631,7 +631,7 @@ void loop() {
   */
   
   case e::Aparcar1:
-    if (yPosition >= 1370 + 530 - 530*turnClockWise)
+    if (yPosition >= 1370)
     {
       setSpeed(0);
       pidEnabled = false;
@@ -1096,7 +1096,7 @@ void changeDrivingDirection() {
         turnSense *= -1;
         turnClockWise = !turnClockWise;
         tramo = 1;
-        mimpu.AddAngle(900*turnSense);
+        mimpu.addAngle(900*turnSense);
         giros = 0;
         uint8_t colorBlocks[8];
         for (uint8_t i = 0; i<8; i++) {
@@ -1125,9 +1125,7 @@ void moveCamera(int8_t angle) {
 int atan3(double _dx, double dy) {
   double dx = _dx * turnSense;
   int beta = 180 / M_PI * atan(-dx / dy);
-  if (dy > 0 && dx < 0 && totalGiros == 4) return beta + 360;
-  else if (dy > 0 && dx < 0) return beta;
-  else if (dy > 0 && dx > 0 && totalGiros < 2) return beta;
+  if (dy > 0 && dx < 0) return beta;
   else if (dy > 0 && dx > 0) return beta + 360;
   else if (dy < 0) return beta + 180; // here we get angles between 90 and 270
   else if (dy == 0 && dx > 0) return -90; // angle decreases in the clockwise (positive x) direction
@@ -1144,9 +1142,9 @@ void autoMoveCamera() {
   switch ((tramo+1) * turnSense)
   {
   case -2:
-    if (yPosition <= 1500 - lidarToImu)
+    if (yPosition <= 1450)
       calculateCameraAngle(600, 1500);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
-    else if (yPosition <= 2000 - lidarToImu)
+    else if (yPosition <= 1950)
       calculateCameraAngle(600, 2000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
     else {
       calculateCameraAngle(1000, 2500);
@@ -1155,7 +1153,7 @@ void autoMoveCamera() {
   break;
 
   case -3:
-    if (xPosition <= 1000 - lidarToImu)
+    if (xPosition <= 950)
       calculateCameraAngle(1000, 2500);
     else {
       calculateCameraAngle(1500, 2500);
@@ -1164,9 +1162,9 @@ void autoMoveCamera() {
   break;
 
   case -4:
-    if (xPosition <= 1500 - lidarToImu)
+    if (xPosition <= 1450)
       calculateCameraAngle(1500, 2500);
-    else if (xPosition <= 2000 - lidarToImu)
+    else if (xPosition <= 1950)
       calculateCameraAngle(2000, 2500);
     else {
       calculateCameraAngle(2500, 2000);
@@ -1175,7 +1173,7 @@ void autoMoveCamera() {
   break;
 
   case -5:
-    if (yPosition >= 2000 + lidarToImu)
+    if (yPosition >= 2050)
       calculateCameraAngle(2500, 2000);
     else {
       calculateCameraAngle(2500, 1500);
@@ -1184,9 +1182,9 @@ void autoMoveCamera() {
   break;
 
   case -6:
-    if (yPosition >= 1500 + lidarToImu)
+    if (yPosition >= 1650)
       calculateCameraAngle(2500, 1500);
-    else if (yPosition >= 1000 + lidarToImu)
+    else if (yPosition >= 1050)
       calculateCameraAngle(2500, 1000);
     else {
       calculateCameraAngle(2000, 500);
@@ -1195,7 +1193,7 @@ void autoMoveCamera() {
   break;
 
   case -7:
-    if (xPosition >= 2000 + lidarToImu)
+    if (xPosition >= 2050)
       calculateCameraAngle(2000, 500);
     else {
       calculateCameraAngle(1500, 500);
@@ -1204,9 +1202,9 @@ void autoMoveCamera() {
   break;
 
   case -8:
-    if (xPosition >= 1500 + lidarToImu)
+    if (xPosition >= 1650)
       calculateCameraAngle(1500, 500);
-    else if (xPosition >= 1000 + lidarToImu)
+    else if (xPosition >= 1050)
       calculateCameraAngle(1000, 500);
     else {
       calculateCameraAngle(600, 1000);
@@ -1215,7 +1213,7 @@ void autoMoveCamera() {
   break;
 
   case -1:
-    if (yPosition <= 1000 - lidarToImu)
+    if (yPosition <= 950)
       calculateCameraAngle(600, 1000);  // blocks on the first lane can only be on the outer position (x=600 when clockwise)
     else {
       calculateCameraAngle(600, 1500);
@@ -1224,9 +1222,9 @@ void autoMoveCamera() {
   break;
 
   case 2:
-    if (yPosition <= 1500 - lidarToImu)
+    if (yPosition <= 1450)
       calculateCameraAngle(2380, 1500); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
-    else if (yPosition <= 2000 - lidarToImu)
+    else if (yPosition <= 1900)
       calculateCameraAngle(2380, 2000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
     else {
       calculateCameraAngle(2000, 2500);
@@ -1235,7 +1233,7 @@ void autoMoveCamera() {
   break;
 
   case 3:
-    if (xPosition >= 2000 + lidarToImu)
+    if (xPosition >= 2050)
       calculateCameraAngle(2000, 2500);
     else {
       calculateCameraAngle(1500, 2500);
@@ -1244,9 +1242,9 @@ void autoMoveCamera() {
   break;
 
   case 4:
-    if (xPosition >= 1500 + lidarToImu)
+    if (xPosition >= 1650)
       calculateCameraAngle(1500, 2500);
-    else if (xPosition >= 1000 + lidarToImu)
+    else if (xPosition >= 1100)
       calculateCameraAngle(1000, 2500);
     else {
       calculateCameraAngle(500, 2000);
@@ -1255,7 +1253,7 @@ void autoMoveCamera() {
   break;
 
   case 5:
-    if (yPosition >= 2000 + lidarToImu)
+    if (yPosition >= 2050)
       calculateCameraAngle(500, 2000);
     else {
       calculateCameraAngle(500, 1500);
@@ -1264,9 +1262,9 @@ void autoMoveCamera() {
   break;
 
   case 6:
-    if (yPosition >= 1500 + lidarToImu)
+    if (yPosition >= 1650)
       calculateCameraAngle(500, 1500);
-    else if (yPosition >= 1000 + lidarToImu)
+    else if (yPosition >= 1100)
       calculateCameraAngle(500, 1000);
     else {
       calculateCameraAngle(1000, 500);
@@ -1275,7 +1273,7 @@ void autoMoveCamera() {
   break;
 
   case 7:
-    if (xPosition <= 1000 - lidarToImu)
+    if (xPosition <= 950)
       calculateCameraAngle(1000, 500);
     else {
       calculateCameraAngle(1500, 500);
@@ -1284,9 +1282,9 @@ void autoMoveCamera() {
   break;
 
   case 8:
-    if (xPosition <= 1500 - lidarToImu)
+    if (xPosition <= 1450)
       calculateCameraAngle(1500, 500);
-    else if (xPosition <= 2000 - lidarToImu)
+    else if (xPosition <= 1900)
       calculateCameraAngle(2000, 500);
     else {
       calculateCameraAngle(2380, 1000);
@@ -1295,7 +1293,7 @@ void autoMoveCamera() {
   break;
 
   case 1:
-    if (yPosition <= 1000 - lidarToImu)
+    if (yPosition <= 950)
       calculateCameraAngle(2380, 1000); // blocks on the first lane can only be on the outer position (x=2380 when anti-clockwise)
     else {
       calculateCameraAngle(2380, 1500);
