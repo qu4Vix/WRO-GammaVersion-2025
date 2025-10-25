@@ -266,9 +266,10 @@ void calculateNearestBlockMultipleDetectionsAndSendCamera (){
   int16_t blocksIndexNumber[numberOfBlocks];
   uint16_t blocksHeight[numberOfBlocks];
   uint16_t blocksWidth[numberOfBlocks];
+  uint16_t blocksSurface[numberOfBlocks];
 
-  int16_t maxHeightIndex = -1;
-  int16_t maxHeight = -1;
+  int16_t maxSurfaceIndex = -1;
+  int16_t maxSurface = -1;
 
   int ourID; 
 
@@ -280,24 +281,25 @@ void calculateNearestBlockMultipleDetectionsAndSendCamera (){
     fHusky = Husky.getBlockLearned(i);
     blocksHeight[i] = fHusky.height;
     blocksWidth[i] = fHusky.width;
+    blocksSurface[i] = fHusky.height * fHusky.width;
   }
 
   // Now we search which block is the highest (closer to the camera). That block has to be taller than it is wide because otherwise it is probably a line, as lines will often be wider than they are tall.
   for (int i = 0; i < numberOfBlocks; i++)
   {
-    if((blocksHeight[i] > maxHeight) && (((double)blocksHeight[i]/(double)blocksWidth[i]) > MinRatioForBlock))
+    if((blocksSurface[i] > maxSurface) && (((double)blocksHeight[i]/(double)blocksWidth[i]) > MinRatioForBlock))
     {
-      maxHeight = blocksHeight[i];
-      maxHeightIndex = blocksIndexNumber[i];
+      maxSurface = blocksSurface[i];
+      maxSurfaceIndex = blocksIndexNumber[i];
 
     } 
   }
 
   // This conditional avoids having problems when the camera does not detect any valid object
-  if((maxHeightIndex == -1 ) || (maxHeight == -1)) 
+  if((maxSurfaceIndex == -1 ) || (maxSurface == -1)) 
   {
   }else{
-    fHusky = Husky.getBlockLearned(maxHeightIndex);
+    fHusky = Husky.getBlockLearned(maxSurfaceIndex);
     
     if((fHusky.ID >= 1) && (fHusky.ID <=4))
     {
