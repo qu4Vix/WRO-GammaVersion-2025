@@ -217,8 +217,9 @@ MPU mimpu;
 HardwareSerial lidarSerial(2);
 RPLidar lidar;
 HardwareSerial commSerial(1);
-TaskHandle_t Task1;
+TaskHandle_t TaskLidar;
 HardwareSerial teleSerial(0);
+TaskHandle_t TaskIMU;
 
 // calculate the error in the direction
 int directionError(int bearing, int target);
@@ -249,6 +250,7 @@ void enviarDato(byte* pointer, int8_t size);
 
 // functions for the management of the car's position
 
+void iteratePosition(void * pvParameters);
 void iteratePositionPID();  // invoke an iteration of the pid controller for the position
 void turn();            // turn
 void setXcoord(uint16_t i);   // set the coordinate x axis
@@ -329,11 +331,19 @@ void setup() {
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
     LidarTaskCode,
-    "Task1",
+    "LidarTask",
     100000,
     NULL,
     10,
-    &Task1,
+    &TaskLidar,
+    0);
+  xTaskCreatePinnedToCore(
+    iteratePosition,
+    "ImuTask",
+    100000,
+    NULL,
+    10,
+    &TaskIMU,
     0);
   delay(500);
   pitiditos(4);
@@ -376,7 +386,7 @@ void setup() {
 
   // move camera away from parking lot
   autoMoveCamera();
-  firma1Detectada=firma1Detectada=0;
+  firma1Detectada=firma2Detectada=0;
   // set default first lane path to the inner one in order for the camera to look away from the block
   if (turnClockWise) arrayBloques[0] = arrayBloques[1] = GreenSignature;
   else arrayBloques[0] = arrayBloques[1] = RedSignature;
@@ -398,19 +408,19 @@ void loop() {
   }
 
   // update mpu's angle
-  mimpu.UpdateAngle();
+  //mimpu.UpdateAngle();
 
   // repeat position functions every 32ms
   static uint32_t prev_ms_position = millis();
   if (millis() >= prev_ms_position) {
-    if (encoderMeasurement != prev_encoderMeasurement) {
+    /*if (encoderMeasurement != prev_encoderMeasurement) {
       // calculate the increment in position and add it
       double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       prev_encoderMeasurement = encoderMeasurement;
       xPosition -= dx; // x -> + derecha - izquierda
       yPosition += dy;
-    }
+    }*/
     if (pidEnabled) {
       iteratePositionPID();
     }
@@ -542,7 +552,7 @@ void loop() {
   case e::Inicio:
     //firma1Detectada = firma2Detectada = false; choose what to do with this line too --------------------------------------------------------
     //objectivePosition = xPosition; //decide what to do with this line ----------------------------------------------------------------------
-    vTaskDelete(Task1);
+    vTaskSuspend(TaskLidar);
     analogWrite(pinLIDAR_motor, 0);
     estado = e::Recto;
     setSpeed(NormalSpeed);
@@ -846,6 +856,24 @@ void LidarTaskCode(void * pvParameters) {
         distances[index] = 0;
         distancesMillis[index] = 0;
       }
+    }
+  }
+}
+
+void iteratePosition(void * pvParameters) {
+  for (;;) {
+    mimpu.UpdateAngle();
+    static uint32_t prev_ms_position = millis();
+    if (millis() >= prev_ms_position) {
+      if (encoderMeasurement != prev_encoderMeasurement) {
+        // calculate the increment in position and add it
+        double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+        double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+        prev_encoderMeasurement = encoderMeasurement;
+        xPosition -= dx; // x -> + derecha - izquierda
+        yPosition += dy;
+      }
+      prev_ms_position = millis() + 32;
     }
   }
 }
