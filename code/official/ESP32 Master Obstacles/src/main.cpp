@@ -170,6 +170,7 @@ bool fixInverted = true;
 bool pidEnabled = true;
 
 uint32_t MIT;
+bool lidarEnabled = true;
 
 // trajectory management variables
 
@@ -338,7 +339,7 @@ void setup() {
     NULL,
     10,
     &TaskLidar,
-    0);
+    0);/*
   xTaskCreatePinnedToCore(
     iteratePosition,
     "ImuTask",
@@ -346,7 +347,7 @@ void setup() {
     NULL,
     10,
     &TaskIMU,
-    0);
+    0);*/
   delay(500);
   pitiditos(4);
   // start lidar's motor rotating at max allowed speed
@@ -557,7 +558,8 @@ void loop() {
   case e::Inicio:
     //firma1Detectada = firma2Detectada = false; choose what to do with this line too --------------------------------------------------------
     //objectivePosition = xPosition; //decide what to do with this line ----------------------------------------------------------------------
-    vTaskSuspend(TaskLidar);
+    //vTaskSuspend(TaskLidar);
+    lidarEnabled = false;
     analogWrite(pinLIDAR_motor, 0);
     estado = e::Recto;
     setSpeed(NormalSpeed);
@@ -831,38 +833,53 @@ uint16_t readDistance(uint16_t angle) {
 // Create code for the task which manages the lidar
 void LidarTaskCode(void * pvParameters) {
   for (;;) {
-    if (IS_OK(lidar.waitPoint())) {
-      // record data
-      uint16_t distance = uint16_t(lidar.getCurrentPoint().distance); //distance value in mm unit
-      float angle    = lidar.getCurrentPoint().angle; //angle value in degrees
+    if (lidarEnabled) {
+      if (IS_OK(lidar.waitPoint())) {
+        // record data
+        uint16_t distance = uint16_t(lidar.getCurrentPoint().distance); //distance value in mm unit
+        float angle    = lidar.getCurrentPoint().angle; //angle value in degrees
 
-      // obtain the index associated with the angle and store in the array
+        // obtain the index associated with the angle and store in the array
 
-      float angulo = angle - mimpu.GetAngle();
-      if (angulo < 0)
-      {
-        angulo = 360 + angulo;
-      }
-      else if (angulo >= 360)
-      {
-        angulo -= 360;
-      }
-      uint16_t index = getIndex(angulo);
-      
-      if (distance > 100 && distance < mapSize)
-      { 
-        //bool  startBit = lidar.getCurrentPoint().startBit; //whether this point belongs to a new scan
-        //byte quality = lidar.getCurrentPoint().quality;
+        float angulo = angle - mimpu.GetAngle();
+        if (angulo < 0)
+        {
+          angulo = 360 + angulo;
+        }
+        else if (angulo >= 360)
+        {
+          angulo -= 360;
+        }
+        uint16_t index = getIndex(angulo);
+        
+        if (distance > 100 && distance < mapSize)
+        { 
+          //bool  startBit = lidar.getCurrentPoint().startBit; //whether this point belongs to a new scan
+          //byte quality = lidar.getCurrentPoint().quality;
 
-        distances[index] = distance;
-        distancesMillis[index] = millis();
-      } else {
-        distances[index] = 0;
-        distancesMillis[index] = 0;
+          distances[index] = distance;
+          distancesMillis[index] = millis();
+        } else {
+          distances[index] = 0;
+          distancesMillis[index] = 0;
+        }
       }
     }
+    mimpu.UpdateAngle();
+    static uint32_t prev_ms_position = millis();
+    if (millis() >= prev_ms_position) {
+      if (encoderMeasurement != prev_encoderMeasurement) {
+        // calculate the increment in position and add it
+        double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+        double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+        prev_encoderMeasurement = encoderMeasurement;
+        xPosition -= dx; // x -> + derecha - izquierda
+        yPosition += dy;
+      }
+      prev_ms_position = millis() + 32;
+    }
     // Try running other tasks after each iteration
-    taskYIELD();
+    vTaskDelay(1);
   }
 }
 
