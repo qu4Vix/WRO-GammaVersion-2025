@@ -826,7 +826,6 @@ uint16_t readDistance(uint16_t angle) {
 // Create code for the task which manages the lidar
 void LidarTaskCode(void * pvParameters) {
   for (;;) {
-    taskYIELD();
     if (IS_OK(lidar.waitPoint())) {
       // record data
       uint16_t distance = uint16_t(lidar.getCurrentPoint().distance); //distance value in mm unit
@@ -857,12 +856,13 @@ void LidarTaskCode(void * pvParameters) {
         distancesMillis[index] = 0;
       }
     }
+    // Try running other tasks after each iteration
+    taskYIELD();
   }
 }
 
 void iteratePosition(void * pvParameters) {
   for (;;) {
-    taskYIELD();
     mimpu.UpdateAngle();
     static uint32_t prev_ms_position = millis();
     if (millis() >= prev_ms_position) {
@@ -876,6 +876,8 @@ void iteratePosition(void * pvParameters) {
       }
       prev_ms_position = millis() + 32;
     }
+    // Try running other tasks after each iteration
+    taskYIELD();
   }
 }
 
