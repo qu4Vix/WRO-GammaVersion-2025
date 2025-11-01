@@ -107,8 +107,10 @@ void setup() {
   delay(5000);
 
   // Initializing time managment
+  // The timer 0 is intialised to count up with a divider of 80, so that it clocks at 80MHz/8 = 1MHz
   timerHandler = timerBegin(0, 80, true);
   timerAttachInterrupt(timerHandler, &onTimer, false);
+  // Trigger timer interrupt every 32000 clock cycles (32ms)
   timerAlarmWrite(timerHandler, 32000, true);
 
   // Initializing the encoder, motor and servo
