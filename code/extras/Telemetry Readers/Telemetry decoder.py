@@ -126,7 +126,7 @@ def parse_packet(receivedBytes):
             i = 40
             distancia270 = (receivedBytes[i] << 8) | receivedBytes[i+1]
             
-            print("Si,si.................")
+            #print("Si,si.................")
             
             return {
                 'Millis': Millis,
@@ -136,13 +136,13 @@ def parse_packet(receivedBytes):
                 'PosicionYObjetivo': PosicionYObjetivo,
                 'Encoder': Encoder-8192,
                 'Estado': Estado,
-                'Bateria': Bateria,
-                'Angulo': angulo,
-                'AnguloObjetivo': anguloObjetivo,
+                #'Bateria': Bateria,
+               # 'Angulo': angulo,
+               # 'AnguloObjetivo': anguloObjetivo,
                 'Tramo': tramo,
-                'Distancia0' : distancia0,
-                'Distancia90':distancia90,
-                'Distancia270':distancia270,
+               # 'Distancia0' : distancia0,
+               #'Distancia90':distancia90,
+                #'Distancia270':distancia270,
             }
         elif cabecera == 7:
             #print("Cabecera 7: Camera ------------------")
@@ -158,14 +158,14 @@ def parse_packet(receivedBytes):
             firma2PosicionX = receivedBytes[i]
             i = 8
             firma2PosicionY = receivedBytes[i]
-            return {
-                'firma1Detectada': firma1Detectada,
-                'firma1PosicionX': firma1PosicionX,
-                'firma1PosicionY': firma1PosicionY,
-                'firma2Detectada': firma2Detectada,
-                'firma2PosicionX': firma2PosicionX,
-                'firma2PosicionY': firma2PosicionY,
-            }
+            #return {
+             #   'firma1Detectada': firma1Detectada,
+             #   'firma1PosicionX': firma1PosicionX,
+             #   'firma1PosicionY': firma1PosicionY,
+              #  'firma2Detectada': firma2Detectada,
+             #   'firma2PosicionX': firma2PosicionX,
+              #  'firma2PosicionY': firma2PosicionY,
+           # }
         else:
             print("Cabecera Desconocida")
             return ("Cabecera desconocida...........")
@@ -174,7 +174,7 @@ def parse_packet(receivedBytes):
 
 while True:
     data, addr = sock.recvfrom(1000000)
-    print("received")
+    #print("received")
     #decoded = decodeBytes(data)
     #print(decoded)
     print(parse_packet(data))
