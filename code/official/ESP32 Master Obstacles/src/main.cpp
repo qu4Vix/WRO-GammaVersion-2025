@@ -169,6 +169,8 @@ bool fixXposition = true;
 bool fixInverted = true;
 bool pidEnabled = true;
 
+uint32_t MIT;
+
 // trajectory management variables
 
 uint16_t tramos[2][8] = {
@@ -424,6 +426,9 @@ void loop() {
     if (pidEnabled) {
       iteratePositionPID();
     }
+
+    if (MIT < millis() - prev_ms_position) MIT = millis() - prev_ms_position;
+
     prev_ms_position = millis() + 32;
   }
 
@@ -474,7 +479,7 @@ void loop() {
       teleSerial.write(0xAA);
     }
     teleSerial.write(byte(06));
-    unsigned long time = millis();
+    unsigned long time = MIT;  //--------Si, si, todo eso...
     long posXLong = long(xPosition);
     long posYLong = long(yPosition);
     long posXObjLong = long(objectivePosition);
