@@ -2,9 +2,34 @@
 **This is our repository for the 2025 season of the WRO Future Engineer Challenge**
 
 ***
-<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo.jpg?raw=true">
+<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo%202.jpg?raw=true">
 
-## Contents
+## TABLE OF CONTENTS
+* [Hardware](#hardware)
+    * [Car movement](#car-movement)
+    * [Structural design](#structural-design)
+
+* [Electronics and sensors](#electronics-and-sensors)
+    * [List of components](#list-of-components)
+    * [Sensor list](#sensor-list)
+    * [Power Management](#power-management)
+    * [PCB](#pcb)
+
+* [Strategy and operation of the code](#strategy-and-operation-of-the-code)
+    * [Slave code](#how-the-slave-code-works)
+    * [Location of the robot](#location-of-the-robot-on-the-board)
+    * [Open Challenge Strategy](#open-challenge-strategy)
+    * [Obstacle Challenge Strategy](#obstacle-challenge-strategy)
+
+* [Photos](#photos)
+    * [Car images](#car-images)
+    * [Team images](#team-images)
+
+* [Demostration videos](#demonstration-videos)
+
+* [License](#license)
+
+* [Credits](#credits)
 
 ## HARDWARE
 Designing a self-driving car for these challenges requires a meticulous design process to achieve an optimal final result that meets the needs of the challenge and the potential obstacles that may arise during the programming process and the competition itself.
@@ -18,13 +43,13 @@ With these changes to the turning system we have implemented the **Ackerman's St
 
 | | |
 | ------------------------- | ------------------------- |
-| ![ ](./readme-photos/Ackerman's%20Steering%20Geometry%20diagram.png) | ![ ](./readme-photos/Ackerman's%20Steering%20Geometry%20in%20our%20robot.png) |
+| ![ ](./photos/readme-photos/Ackerman's%20Steering%20Geometry%20diagram.png) | ![ ](./photos/readme-photos/Ackerman's%20Steering%20Geometry%20in%20our%20robot.png) |
 
 More information about Ackerman's Steering Geometry can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Ackermann_steering_geometry).
 
 According to competition regulations, only one motor can drive a drive axle. Therefore, in our case, we made the rear axle the drive axle to which the motor is connected. This is how the original kit was made. We also used the differential that came with the kit for proper operation. The differential allows the rear wheels to travel different distances, since the arc that each wheel travels is different when turning, as the turning radius of each wheel also varies. For our robot, we also used the motor that came with the kit; you can see the image below.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Motor%20Area.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Motor%20Area.jpg?raw=true" width="500">
 
 This motor provides us with the necessary torque to comfortably move the robot without it getting stuck. In our case, we're not trying to get the robot to go at maximum speed, so the robot's overall speed wasn't a relevant factor when choosing the motor.
 
@@ -40,7 +65,7 @@ Thirdly, at the rear we can see from above the **PCB**, which houses much of our
 
 Finally, at the rear, the metal mast that raises and holds our **camera** is held on a 3D-designed base to the vehicle.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/LiDAR%20Area.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/LiDAR%20Area.jpg?raw=true" width="500">
 
 ## ELECTRONICS AND SENSORS
 
@@ -58,6 +83,7 @@ Below we provide a detailed list of all the electronic components that make up t
 * Motor Driver x2
 * Power Supply x3
 * RGB LEDs
+* White LED flashlight
 
 #### Esp-32 (Microcontroller)
 
@@ -73,7 +99,7 @@ To bring our autonomous car project to fruition, we opted for the ESP-32 microco
 
 We integrated two ESP32s into our robot, as it was necessary due to the large amount of information they must analyze from all the sensors and the decisions they must make. For this purpose, we call one ESP32 "Slave," to which several sensors are connected. After analyzing this information, it sends it to another ESP32, which we call "Master." Other sensors are connected to this ESP32, and it is responsible for executing all the movement commands.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/ESP32%20Diagram%20of%20connections.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/ESP32%20Diagram%20of%20connections.jpg?raw=true" width="500">
 
 #### HuskyLens (Camera)
 
@@ -81,7 +107,7 @@ The HuskyLens camera was our choice because it gives us a larger horizontal fiel
 	
 The camera's sole function is to detect the colored blocks, indicate their position on the camera, and indicate their color. We train it for all of this before the competition.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/HuskyLens%20camera.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/HuskyLens%20camera.jpg?raw=true" width="500">
 
 #### RPLiDAR A1 M8 (LiDAR)
 
@@ -97,13 +123,23 @@ Rather than relying on traditional ultrasonic sensors for obstacle detection, we
 
 During the match the LiDAR technology is used to establish the initial position of the robot and the direction of the game. In this way the random initial conditions do not affect the outcome of the match.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/RPLiDAR%20A1%20M8%20image.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/RPLiDAR%20A1%20M8%20image.jpg?raw=true" width="500">
 
 #### MPU 9250 and Pololu Magnetic Encoder (IMU and encoder)
 
 On one hand, IMU stands for Inertial Measurement Unit, this is a combination of gyroscopes, accelerometers and in our MPU 9250 magnetometers too. On the other hand, a enconder is a system that reads the rotation of the motor or axle and allows us to know how much it has turned, and with some analysis it lets us know the length of the displacement of our robot. Inertial navigation has plenty of disadvantages compared to for example LiDAR navigation, some of its problems are that the precision is worse than LiDAR's and that this system does not really know where the robot is in the real world, only how much it has moved or turned since the start of the program. It might seem that using this technology is a downgrade and unnecessary as we already have the LiDAR, however, the IMU combinated with a encoder gives easier-to-use data compared to the huge amount of information the LiDAR gives us every second.
 
 In our case, we only use our LiDAR to establish which is the initial position of the robot and the direction of the game, but after this the LiDAR is no longer used in the game. Through all the rest of the match only the IMU and encoder are used to follow an imaginary path around the central square in the Open Challenge or around the square and through the traffic signs in the Obstacle Challenge with the color information gived by the camera.
+
+#### White LED flashlight
+
+Shortly before attending the Spanish national final, we observed that in certain situations with changing lighting, our robot could have serious problems distinguishing colors. The fact that our camera is sensitive to light was already known, but we didn't think it would be so problematic at first. However, seeing that it was causing problems and with limited time, we decided to install a white LED light next to the camera so that it would receive video with a constant amount of illumination at all times.
+
+The LED was connected directly to the battery and main power switch, ensuring that the power consumption of the LED  wouldn't negatively impact other more sensitive systems in the robot. To prevent the LED from receiving too much current, several resistors were installed in parallel along the cable.
+
+After the competition, we analyzed that the camera still had occasional problems, and we eventually redesigned the camera's code to avoid these issues. Our robot still has the space and components necessary to reinstall the LED if we deem it necessary during the competition, although, as we have already mentioned, this shouldn't be the case.
+
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/photos/readme-photos/Placeholder%20F.004.png?raw=true" width="500">
 
 ### Sensor list
 
@@ -131,9 +167,9 @@ To seamlessly connect and control all the components of our autonomous car, we d
 
 Our custom PCB design allowed for cleaner wiring, reduced interference, and enhanced reliability. It simplified the process of connecting and configuring various sensors and actuators, enabling smoother integration and troubleshooting during the development phase.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/PCB%20Design.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB%20Design.jpg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/readme-photos/Schematic%20PCB.png?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Schematic%20PCB.png?raw=true" width="800">
 
 ## STRATEGY AND OPERATION OF THE CODE
 
@@ -155,7 +191,7 @@ To determine the car's exact location on the dashboard, the same system is used 
 
 2. The robot then moves forward until it is a certain distance from the front wall that allows it to see to the sides. The robot now measures the distance to its left (270°) and right (90°). With this data, the robot is able to establish its position on the X axis of the coordinate system, and it also allows it to determine the direction of rotation of the circle.
 
-### Strategy's Open Challenge
+### Open Challenge Strategy
 
 In the Open Challenge, the robot must complete three laps of the circuit from a random starting position and direction and must be able to finish in the same starting section. In addition, the size of the central square varies from round to round, adding additional difficulty.
 	
@@ -163,7 +199,7 @@ With the information from the previous paragraph in mind, our strategy is based 
 
 | | |
 | ------------------------- | ------------------------- |
-| ![ ](./readme-photos/Diagram%201%20Open%20Challenge.png) | ![ ](./readme-photos/Diagram%202%20Open%20Challenge.png) |
+| ![ ](./photos/readme-photos/Diagram%201%20Open%20Challenge.png) | ![ ](./photos/readme-photos/Diagram%202%20Open%20Challenge.png) |
 
 ### Obstacle Challenge Strategy
 
@@ -178,17 +214,21 @@ Due to the limited vision of our camera, the robot must perform corrective maneu
 ### Car images
 | | |
 | ------------------------- | ------------------------- |
-| ![front](./vehicle-photos/Front.jpg)  | ![back](./vehicle-photos/Back.jpg) |
-| ![right](./vehicle-photos/Right%20Side.jpg) | ![left](./vehicle-photos/Left%20Side.jpg) |
-| ![top](./vehicle-photos/Top.jpg) | ![bottom](./vehicle-photos/Bottom.jpg) |
+| ![front](./photos/vehicle-photos/Front.jpg)  | ![back](./photos/vehicle-photos/Back.jpg) |
+| ![right](./photos/vehicle-photos/Right%20Side.jpg) | ![left](./photos/vehicle-photos/Left%20Side.jpg) |
+| ![top](./photos/vehicle-photos/Top.jpg) | ![bottom](./photos/vehicle-photos/Bottom.jpg) |
 ### Team images
 
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Funny%20Image.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Funny%20Image.jpg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%201.jpg?raw=true" width="800">
 
-## Demonstration videos
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpg?raw=true" width="800">
+
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpg?raw=true" width="800">
+
+## DEMONSTRATION VIDEOS
 
 Demonstration videos of the car successfully completing both challenges. The links to each of them can be found in:
 
@@ -201,10 +241,12 @@ The [source code](/code/) in this repository is licensed under the **GNU General
 
 The [hardware](/robot-info/hardware/) exposed in this project is licensed under the **Creative Commons Attribution Share Alike 4.0 International** license.
 
-The documentation of this repository; found in [`robot-info`](/robot-info/), [`vehicle-photos`](/vehicle-photos/), [`videos`](/videos/), [`team-photos`](/team-photos/), as well as this `README.md`; is licensed under the **CERN Open Hardware Licence Version 2 - Strongly Reciprocal** license.
+The documentation of this repository; found in [`robot-info`](/robot-info/), [`vehicle-photos`](/photos/vehicle-photos/), [`videos`](/videos/), [`team-photos`](/photos/team-photos/), as well as this `README.md`; is licensed under the **CERN Open Hardware Licence Version 2 - Strongly Reciprocal** license.
 
 A copy of each license can be found in the [LICENSE](LICENSE) file. More information about the licenses in the specific README.md of each section.
 
 ## Credits
 
 We would like to thank DiverBOT and its team Javier and Ana for their help material given to this project.
+
+
