@@ -2,7 +2,7 @@
 **This is our repository for the 2025 season of the WRO Future Engineer Challenge**
 
 ***
-<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/team-photos/Team%20Photo%202.jpg?raw=true">
+<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpg?raw=true">
 
 ## TABLE OF CONTENTS
 * [Hardware](#hardware)
@@ -139,7 +139,7 @@ The LED was connected directly to the battery and main power switch, ensuring th
 
 After the competition, we analyzed that the camera still had occasional problems, and we eventually redesigned the camera's code to avoid these issues. Our robot still has the space and components necessary to reinstall the LED if we deem it necessary during the competition, although, as we have already mentioned, this shouldn't be the case.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/photos/readme-photos/Placeholder%20F.004.png?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Placeholder%20F.004.png?raw=true" width="500">
 
 ### Sensor list
 
