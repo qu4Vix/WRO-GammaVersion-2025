@@ -2,7 +2,7 @@
 **This is our repository for the 2025 season of the WRO Future Engineer Challenge**
 
 ***
-<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpg?raw=true">
+<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true">
 
 ## TABLE OF CONTENTS
 * [Hardware](#hardware)
@@ -224,9 +224,9 @@ Due to the limited vision of our camera, the robot must perform corrective maneu
 
 <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%201.jpg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true" width="800">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpeg?raw=true" width="800">
 
 ## DEMONSTRATION VIDEOS
 
