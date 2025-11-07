@@ -51,6 +51,12 @@
 
 // ***** DECLARING VARIABLES, OBJECTS AND FUNCTIONS *****
 
+
+//TEST MADE BY PEPE
+int32_t encoderMeasurement;
+int32_t prev_encoderMeasurement;
+
+
 hw_timer_t* timerHandler;
 HardwareSerial commSerial(1);
 Motor mimotor(pinPWM, pinDir1, pinDir2, pinEn, 0.25, 1);
@@ -149,14 +155,14 @@ void loop() {
   static uint32_t prev_ms_bat = millis();
   if (millis() > prev_ms_bat) {
     updateBattery();
-    prev_ms_bat = millis() + 500;
+    prev_ms_bat = millis() + 1000;
   }
 
   // Sends the measurements of the encoder
-  static uint32_t prev_ms_encoder = millis();
-  if (millis() > prev_ms_encoder) {
+  encoderMeasurement = miencoder.GetEncoder();
+  if ((encoderMeasurement - prev_encoderMeasurement) >= 2) {
+    prev_encoderMeasurement = encoderMeasurement;
     sendEncoder(miencoder.GetEncoder());
-    prev_ms_encoder = millis() + 32;
   }
 
   // Sends the position and type of the nearest block detected by the camera
