@@ -131,7 +131,7 @@ Line2D CalcBestFitLineFromSample(Point2D * dataBuffer, const List<uint16_t> & da
  * @return The number of lines extracted to the output buffer, or -1 if failed to find lines
  * 
  */
-int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer) {
+int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBuffer) {
     Point2D * dataBuffer = storage->convertToCartesian();
     // Initialize number of trials
     uint8_t totalTrials = 0;
@@ -159,7 +159,7 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer) {
         std::uniform_int_distribution<> mainDist(0, unassocPoints.size() - 1); // we substract one from size because the distribution includes the right limit
         // Generate the central point of the sample and declare the buffer for the randomly selected points
         uint16_t centrePoint = mainDist(gen);
-        double centreAngle = storage->getMeasurement(unassocPoints[centrePoint]).angle;
+        double centreAngle = storage->getMeasurement(unassocPoints[centrePoint]).range;
         uint16_t sampleBuffer[SAMPLE_SIZE];
         sampleBuffer[0] = centrePoint;
         printf("Centre %u  ", centrePoint);
@@ -183,7 +183,7 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer) {
                 }
             }
             if (isNew) {
-                if (abs(storage->getMeasurement(unassocPoints[index]).angle - centreAngle) < DEGREE_RANGE) { // what if angle 1 is 359º and angle 2 is 1º, the angular distance should be 2º
+                if (abs(storage->getMeasurement(unassocPoints[index]).range - centreAngle) < DEGREE_RANGE) { // what if angle 1 is 359º and angle 2 is 1º, the angular distance should be 2º
                     // accept point
                     sampleBuffer[sampledPoints] = index;
                     sampledPoints++;
@@ -223,6 +223,11 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer) {
             // If there are less unassociated points left than the concensus, we will be unable to read any more lines, so break the loop 
             if (unassocPoints.size() < CONCENSUS) {
                 printf("Breaking \n\n");
+                if (unassocBuffer) {
+                    for (uint8_t unPt = 0; unPt < unassocPoints.size(); unPt++) {
+                        unassocBuffer[unPt] = dataBuffer[unassocPoints[unPt]];
+                    }
+                }
                 break;
             }
         }

@@ -11,20 +11,20 @@ class lidarStorage {
     lidarStorage(uint16_t size);
     ~lidarStorage();
     void addMeasurements(double radius, double angle);
-    void addMeasurements(lidarMeasurement measurement);
-    void setArray(lidarMeasurement * array, uint16_t size);
+    void addMeasurements(polarPoint2D measurement);
+    void setArray(polarPoint2D * array, uint16_t size);
     inline uint16_t getSize();
     Point2D * convertToCartesian();
-    inline lidarMeasurement getMeasurement(uint16_t index);
+    inline polarPoint2D getMeasurement(uint16_t index);
   private:
     Point2D * cartesianData;
     uint16_t index = 0;
     uint16_t _size;
-    lidarMeasurement * _data;
+    polarPoint2D * _data;
 };
 
 lidarStorage::lidarStorage(uint16_t size) : _size(size) {
-  _data = new lidarMeasurement[_size];
+  _data = new polarPoint2D[_size];
   cartesianData = new Point2D[_size];
 }
 
@@ -34,18 +34,18 @@ lidarStorage::~lidarStorage() {
 }
 
 void lidarStorage::addMeasurements(double radius, double angle) {
-  _data[index].radius = radius;
-  _data[index].angle = angle;
+  _data[index].range = radius;
+  _data[index].bearing = angle;
   index++;
 }
 
-void lidarStorage::addMeasurements(lidarMeasurement measurement) {
+void lidarStorage::addMeasurements(polarPoint2D measurement) {
   _data[index] = measurement;
   index++;
 }
 
-void lidarStorage::setArray(lidarMeasurement * array, uint16_t size) {
-  memcpy(_data, array, size * sizeof(lidarMeasurement));
+void lidarStorage::setArray(polarPoint2D * array, uint16_t size) {
+  memcpy(_data, array, size * sizeof(polarPoint2D));
 }
 
 inline uint16_t lidarStorage::getSize() {
@@ -54,16 +54,26 @@ inline uint16_t lidarStorage::getSize() {
 
 Point2D * lidarStorage::convertToCartesian() {
   for (uint16_t i = 0; i < _size; i++) {
-    cartesianData[i].x = _data[i].radius * sin(_data[i].angle * M_PI / 180);  // The angle is given with respect to the positive y axis, hence, angle=0 lies on the y positive axis
-    cartesianData[i].y = _data[i].radius * cos(_data[i].angle * M_PI / 180);  // So x = r * sin(0) and y = r * cos(0)
+    cartesianData[i].x = _data[i].range * sin(_data[i].bearing * M_PI / 180);  // The angle is given with respect to the positive y axis, hence, angle=0 lies on the y positive axis
+    cartesianData[i].y = _data[i].range * cos(_data[i].bearing * M_PI / 180);  // So x = r * sin(0) and y = r * cos(0)
   }
   return cartesianData;
 }
 
-inline lidarMeasurement lidarStorage::getMeasurement(uint16_t index) {
+inline polarPoint2D lidarStorage::getMeasurement(uint16_t index) {
   return _data[index];
 }
 
+#define SPIKE_JUMP 250
+void findBlocks(polarPoint2D * dataBuffer, uint8_t size) {
+  uint8_t spikes[size];
+  uint8_t spikeRecord = 0;
+  for (uint8_t i = 0; i < size - 1; i++) {
+    if (abs(dataBuffer[i].range - dataBuffer[i+i].range) < SPIKE_JUMP) {
+      spikes[spikeRecord] = i;
+    }
+  }  
+}
 
 /*
 lidarStorage * pStorage;
