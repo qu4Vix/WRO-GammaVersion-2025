@@ -4,10 +4,10 @@
 #include <vector>
 
 // Measurement of the lidar given by range and bearing
-struct lidarMeasurement
+struct polarPoint2D
 {
-    double radius;
-    double angle;
+    double range;
+    double bearing;
 };
 
 // Point on the 2D plane

@@ -12,7 +12,7 @@ RPLidar lidar;
 
 TaskHandle_t Task1;
 
-lidarMeasurement lidarBuffer[365];
+polarPoint2D lidarBuffer[365];
 uint16_t measurementsIndex = 0;
 lidarStorage * pStorage;
 
@@ -88,7 +88,7 @@ void Task1Code(void * pvParameters) {
           writing = false;
         }
         // store the new measurement in the buffer (range and bearing, the angle between 180 and -180 for easy substractions)
-        lidarBuffer[measurementsIndex] = lidarMeasurement{distance, (angle > 180)?(angle - 360):angle};
+        lidarBuffer[measurementsIndex] = polarPoint2D{distance, (angle > 180)?(angle - 360):angle};
         measurementsIndex++;
       }
     }
@@ -100,13 +100,21 @@ float readDistance(uint16_t angle) {
   while (writing);
   Line2D lines[MAX_LANDMARKS];
   reading = true;
-  int output = exeRANSAC(pStorage, lines);
+  int output = exeRANSAC(pStorage, lines, 0);
   reading = false;
   if (output == -1) {
     digitalWrite(PIN_Buzzer, HIGH);
     return 0;
   }
-  float distanceMeasure = DistanceToLine(lines[0], Point2D{0,0});
-  
-  return distanceMeasure;
+  /*polarPoint2D polarLines[output];
+  for (uint8_t l = 0; l < output; l++) {
+    Point2D perp = PerpPointOnLine(lines[l], Point2D{0,0});
+    polarLines[l];
+  }*/
+  for (uint8_t l = 0; l < output; l++) {
+    if (abs(180/PI*atan(lines[l].a) - angle) < 5) {
+      return DistanceToLine(lines[l], Point2D{0,0});
+    }
+  }
+  return 0;
 }

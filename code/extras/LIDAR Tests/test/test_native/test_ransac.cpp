@@ -114,7 +114,7 @@ void test_lidar_line_ransac_extraction() {
         storage.addMeasurements(rawData[2*i+1], (rawData[2*i]>180)?(rawData[2*i] - 360):rawData[2*i]);
     }
     Line2D resLine[10];
-    int8_t out = exeRANSAC(&storage, resLine);
+    int8_t out = exeRANSAC(&storage, resLine, 0);
     printf("Line 0 a: %lf ", resLine[0].a);
     printf("b: %lf \n", resLine[0].b);
     printf("Line 1 a: %lf ", resLine[1].a);
@@ -133,10 +133,16 @@ void test_lidar_ransac_from_file() {
         storage.addMeasurements(bufferChosen[2*i+1], (bufferChosen[2*i]>180)?(bufferChosen[2*i] - 360):bufferChosen[2*i]);
     }
     Line2D resLine[10];
-    int8_t out = exeRANSAC(&storage, resLine);
+    Point2D unassoc[CONCENSUS];
+    memset(unassoc, 0, sizeof(Point2D)*CONCENSUS);
+    int8_t out = exeRANSAC(&storage, resLine, unassoc);
     for (uint8_t line = 0; line < out; line++) {
         printf("Line a: %lf ", resLine[line].a);
         printf("b: %lf \n", resLine[line].b);
+    }
+    for (uint8_t p = 0; p < CONCENSUS; p++) {
+        printf("Point x: %lf ", unassoc[p].x);
+        printf("y: %lf \n", unassoc[p].y);
     }
     TEST_ASSERT_EQUAL(3, out);
 }
@@ -196,7 +202,7 @@ void test_ransac_sampling() {
     // Generate the central point of the sample and declare the buffer for the randomly selected points
     uint16_t centrePoint = mainDist(gen);
     printf("Centre %u  ", centrePoint);
-    double centreAngle = storage.getMeasurement(centrePoint).angle;
+    double centreAngle = storage.getMeasurement(centrePoint).range;
     uint16_t sampleBuffer[SAMPLE_SIZE];
     sampleBuffer[0] = centrePoint;
     uint8_t sampledPoints = 1;
@@ -219,7 +225,7 @@ void test_ransac_sampling() {
             }
         }
         if (isNew) {
-            if (abs(storage.getMeasurement(index).angle - centreAngle) < DEGREE_RANGE) { // what if angle 1 is 359º and angle 2 is 1º, the angular distance should be 2º
+            if (abs(storage.getMeasurement(index).range - centreAngle) < DEGREE_RANGE) { // what if angle 1 is 359º and angle 2 is 1º, the angular distance should be 2º
                 // accept point
                 sampleBuffer[sampledPoints] = index;
                 sampledPoints++;
