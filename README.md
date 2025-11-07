@@ -207,7 +207,7 @@ In the Obstacle Challenge, the robot must complete three laps of the circuit, do
 	
 In our car, the straight sections of the board are organized into imaginary lanes, so that when the robot detects a colored block, it changes lanes or stays in the one it's currently in to pass on the correct side.
 
-Due to the limited vision of our camera, the robot must perform corrective maneuvers during certain turns to view the blocks from the best angle for detection. Then, to park, we use several sensors installed on the sides of the robot.
+Due to the limited vision of our camera, the robot rotates the camera with a servo to view the blocks from the best angle for detection. Then, to park, we use several sensors installed on the sides of the robot.
 
 ## PHOTOS
 
