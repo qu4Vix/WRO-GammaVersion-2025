@@ -30,14 +30,16 @@
 
 
 
-// ***** ESTABLISHING DEFINES *****
+// ***** DEFINES *****
 
 // Practice mode (Button desabled) for easy launches while testing
 #define PRACTICE_MODE false
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false       // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
-#define ENABLE_TELEMETRY true
+
+// This enables the transmission of telemetry used for debugging. In normal situations it is not needed to set this define to FALSE.
+#define ENABLE_TELEMETRY true   
 
 // Speeds
 #define StartSpeed 4
@@ -48,13 +50,15 @@
 #define servoKP 2.5
 #define servoKD 0
 
-// position PID controller variables
+// Position PID controller variables
 #define positionKP 0.35
 #define positionKD 2.5
 
 
 
 // ***** INITIALIZING VARIABLES, OBJECTS AND FUNCTIONS *****
+
+// Direction related variables
 int prev_setAngle;
 int actual_directionError;
 int prev_directionError;
@@ -110,7 +114,6 @@ RPLidar lidar;
 HardwareSerial commSerial(1);
 TaskHandle_t Task1;
 HardwareSerial teleSerial(0);
-
 
 u_int16_t distancia90;
 u_int16_t distancia270;

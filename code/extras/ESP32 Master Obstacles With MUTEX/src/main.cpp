@@ -1,19 +1,47 @@
+/***************************************************
+ * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
+ * 
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
+ * 
+****************************************************/
+
+/***************************************************
+ * 
+ * This is the code for the "Main" ESP32 of our robot, which it is responsible for controlling
+ * some sensors and to make all the decisions.
+ * 
+ * THIS VERSION OF THE ESP32 MASTER CODE IS ONLY FOR THE OBSTACLE CHALLENGE
+ * For the Open Challenge use "ESP32 MASTER"
+ *  
+****************************************************/
+
+
+
+// ***** INCLUDING THE LIBRARIES *****
+
 #include <Arduino.h>
 #include <AdvancedMPU.h>
 #include <RPLidar.h>
-//#include "credentials.h"
 #include "pinAssignments.h"
-
 #include <rom/rtc.h>
 #include <esp_task_wdt.h>
+
+
+
+// ***** DEFINES *****
 
 // Practice mode (Button desabled) for easy launches while testing
 #define PRACTICE_MODE true
 
 // Enables wifi functions when true
-#define ENABLE_WIFI false
+#define ENABLE_WIFI false         // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
+
+// This enables the transmission of telemetry used for debugging. In normal situations it is not needed to set this define to FALSE.
 #define ENABLE_TELEMETRY true
 
+// Commented INOP
 /*#if ENABLE_WIFI == true
 #include <OTAUpdate.h>
 #include <Telemetry.h>
@@ -27,76 +55,31 @@ Updater miota(otaPort);
 TelemetryManager telemetry(receiversIP, receiversPort);
 #endif
 */
+
 // Speeds
 #define StartSpeed 4
 #define CruisiereSpeed 8
 #define NormalSpeed 7
 
-
-
-void updatePosition();
-/*
- *  Speed infromation
- *  Minimum speed: 2
- *  Safe speed for recognition: 3
- *  Safe speeds for cruisiere: 5,6
- *  Risky speed: 7
- *
- * 
- */
+// Speed infromation:
+//    Minimum speed: 2
+//    Safe speed for recognition: 3
+//    Safe speeds for cruisiere: 5,6
+//    Risky speed: 7
+//    Servo and direction variables
 
 // Servo and direction variables
-
 #define servoKP 2.5
 #define servoKD 0
-int prev_setAngle;
-int actual_directionError;
-int prev_directionError;
-float objectiveDirection;
 
-// battery level variable
-uint8_t bateria;
+// Camera signatures
+#define GreenSignature 1    // This have to match the values ​​in the SLAVE code
+#define RedSignature 2      // This have to match the values ​​in the SLAVE code
 
-// camera signatures
+// Conversion between mm and encoder counts
+#define MMperEncoder 1.543      // REALLY IMPORTANT VALUE, ONLY CHANGE IF ABSOLUTELY NECESSARY
 
-#define GreenSignature 1
-#define RedSignature 2
-
-bool firma1Detectada = false;
-uint8_t firma1X = 18;
-uint8_t firma1Y = 19;
-bool firma2Detectada = false;
-uint8_t firma2X = 20;
-uint8_t firma2Y = 21;
-
-// conversion between mm and encoder counts
-#define MMperEncoder 1.543
-
-// List of possible states for the car
-enum e {
-  Inicio,
-  Recto,
-  Final,
-  Arrancar,
-  Reposicionar,
-  Reinicio, // Not necessary -------------------------------------------------------------------------------------------------
-  Posicionamiento,
-  EntradaFase1,
-  EntradaFase2,
-  EntradaFase3,
-  EntradaFase4,
-  Aparcar1,
-  Aparcar2,
-  Aparcar3,
-  Aparcar35,
-  Aparcar4,
-  Esperar,
-  Prueba
-};
-uint8_t estado = e::Arrancar;
-
-// track constants
-
+// Track constants
 // size of the map (mm)
 #define mapSize 3000
 // width of the lanes
@@ -113,64 +96,109 @@ uint8_t estado = e::Arrancar;
 #define carLength 240
 #define lidarToImu 150
 
-// journey variables
+// Start value of yPosition
+#define posYmagica 1500 // Value of initialization of the variable yPosition so that program starts normally, even though the yPos is properly obtained in state e::Volver
 
+// Position PID controller variables
+#define positionKP 0.4  // Different from phase 1 for some reason
+#define positionKD 4
+#define positonKPmagico 90
+#define positionKPaparcar 3.5
+#define positionKDaparcar 12.5
+
+
+
+// ***** INITIALIZING VARIABLES AND OBJECTS *****
+
+// Direction related variables
+int prev_setAngle;
+int actual_directionError;
+int prev_directionError;
+float objectiveDirection;
+
+// Battery level variable
+uint8_t bateria;
+
+// Signatures variables
+bool firma1Detectada = false;   // If signature 1 (AKA green) is or isn't detected by the camera
+uint8_t firma1X = 18;           // Signature 1 X position on the camera's screen
+uint8_t firma1Y = 19;           // Signature 1 Y position on the camera's screen
+bool firma2Detectada = false;   // If signature 2 (AKA red) is or isn't detected  by the camera
+uint8_t firma2X = 20;           // Signature 2 X position on the camera's screen
+uint8_t firma2Y = 21;           // Signature 2 Y position on the camera's screen
+
+// List of possible states for the car
+enum e {
+  Inicio,
+  Recto,
+  Final,
+  Arrancar,
+  Reposicionar,
+  Reinicio, // Not necessary
+  Posicionamiento,
+  EntradaFase1,
+  EntradaFase2,
+  EntradaFase3,
+  EntradaFase4,
+  Aparcar1,
+  Aparcar2,
+  Aparcar3,
+  Aparcar35,
+  Aparcar4,
+  Esperar,
+  Prueba
+};
+uint8_t estado = e::Arrancar; // Default state for the car
+
+// Journey variables
 // number of turns
 uint8_t giros = 0;
 uint8_t totalGiros = 0;
 // section in which the car is
-uint8_t tramo = 1;
+uint8_t tramo = 1;  // It can value from 1 to 8, being 1 the corner just after the starting section and 8 when the robot goes through the starting section at the end of each turn
 // sense of turn
-int8_t turnSense = 0;
+int8_t turnSense = 0; // 1 is counterclockwise. -1 is clockwise. And 0 is the default value until of the two is decided
 // whether you have to turn clockwise or not
-bool turnClockWise;
+bool turnClockWise;   // 0 is counterclockwise. 1 is clockkwise
 // whether we are moving forwards (+1) or backwards (-1), in order to account for corrections in the PID. We initialize it at 0 (not moving)
 int8_t motionDirection = 0;
+// wheter the robot is recognizing or parking
 bool isRecognizing = true;
 bool isParking = false;
 
-// encoder variables
-
+// Encoder variables
 int32_t encoderMeasurement;
 int32_t prev_encoderMeasurement;
 
-// lidar measurement variables
-
+// LiDAR measurement variables
 uint16_t distances[360];
 static uint16_t distancesMillis[360];
 uint16_t distancia0;
 uint16_t distancia90;
 uint16_t distancia270;
 
-// GOD HELP ME PLEASE, this is for testing
+// DEBUGGING VARIABLE
 uint32_t prev_ms_mainloop;
+uint32_t MIT;
 
-// car position on the map (origin at the bottom-left corner)
-
+// Car position on the map (origin at the bottom-left corner)
 // x position of the car (increases to the right)
 double xPosition = 0;
-double loop_xPosition = 0;
+double loop_xPosition = 0; // To avoid problems with the semaphores
 // y position of the car (increases upwards)
 double yPosition = 0;
-double loop_yPosition = 0;
+double loop_yPosition = 0; // To avoid problems with the semaphores
 
-//SOME MAGIC TO MAKE IT WORK. AKA SEMAPHORES
+// Stablishing the semaphore
 SemaphoreHandle_t mutex;
 
-#define posYmagica 1500 // value of initialization of the variable yPosition so that program starts normally, even though the yPos is properly obtained in state e::Volver
-
+// Starting positions and marquing variables
 double startXposition;
 double marcaPos;
 unsigned long marcaMillis;
 byte marcaEstado;
 
-// position PID controller variables
-
-#define positionKP 0.4  // different from phase 1 for some reason --------------------------------------------------------------------
-#define positionKD 4
-#define positonKPmagico 90
-#define positionKPaparcar 3.5
-#define positionKDaparcar 12.5 //Ajustar para que haga las maniobras bien, y todo el lio...
+// Other variables
 float KPActual = positonKPmagico;
 float KDActual = positionKD;
 int objectivePosition = 0;
@@ -179,27 +207,28 @@ float prev_positionError;
 bool fixXposition = true;
 bool fixInverted = true;
 bool pidEnabled = true;
-
-uint32_t MIT;
 bool lidarEnabled = true;
 bool IMUEnabeld = true;
 
-// trajectory management variables
-
+// Trajectory management variables
 uint16_t tramos[2][8] = {
   {500,500,2500,2500,2500,2500,500,500},
   {mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, trackCenter, trackCenter, trackCenter, trackCenter}
 };
+
+// Blocks array
 uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+// Bocks paths
 const uint16_t blockPaths[2][4][3] =
 {
-  { // anticlockwise
+  { //Anticlockwise
     {2500, mapSize - trackCenter - trackLateral, mapSize - 380}, //Center, left, right
     {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral},
     {500, trackCenter + trackLateral, trackCenter - trackLateral}
   },
-  { // clockwise
+  { // Clockwise
     {500, 380, trackCenter + trackLateral},
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // Center, left, right
     {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral},
@@ -226,8 +255,7 @@ bool senseDirectionChanged = false;
 bool bloqueEnMedio = false;
 uint16_t parkingY;
 
-// object declarations
-
+// Object declarations
 MPU mimpu;
 HardwareSerial lidarSerial(2);
 RPLidar lidar;
@@ -236,54 +264,47 @@ TaskHandle_t TaskLidar;
 HardwareSerial teleSerial(0);
 TaskHandle_t TaskIMU;
 
-// calculate the error in the direction
+
+
+// ***** INITIALIZING FUNCTIONS *****
+
+// Calculate the error in the direction
 int directionError(int bearing, int target);
 float directionError(double bearing, int target);
 
-// esp32 intercommunication functions
+void setSpeed(int speed);             // Set the car's speed
+void setSteering(int angle);          // Set the angle of the servo
+void receiveData();                   // Receive data from the serial
+void manageTension(uint8_t tension);  // Turn a led on depending on the tension received
 
-// set the car's speed
-void setSpeed(int speed);
-// set the angle of the servo
-void setSteering(int angle);
-// receive data from the serial
-void receiveData();
-// turn a led on depending on the tension received
-void manageTension(uint8_t tension);
+// LiDAR
+uint16_t getIndex(float angle);           // get the index in the distances array for an angle given
+uint16_t readDistance(uint16_t angle);    // Angle from 0 to 359
+void LidarTaskCode(void * pvParameters);  // Create code for the task which manages the LIDAR
 
-// LIDAR management variables
+void enviarDato(byte* pointer, int8_t size);  // send a piece of data to the telemetry esp32
 
-// get the index in the distances array for an angle given
-uint16_t getIndex(float angle);
-// Angle from 0 to 359
-uint16_t readDistance(uint16_t angle);
-// Create code for the task which manages the LIDAR
-void LidarTaskCode(void * pvParameters);
-
-// send a piece of data to the telemetry esp32
-void enviarDato(byte* pointer, int8_t size);
-
-// functions for the management of the car's position
-
+// Functions for the management of the car's position
 void iteratePosition(void * pvParameters);
-void iteratePositionPID();  // invoke an iteration of the pid controller for the position
-void turn();            // turn
-void setXcoord(uint16_t i);   // set the coordinate x axis
-void setYcoord(uint16_t f);   // set the coordinate y axis
-void decideTurn();  // detect the sense of turn
-void checkTurn();   // check wether you have to turn or not
-
+void iteratePositionPID();                  // invoke an iteration of the pid controller for the position
+void turn();                                // turn
+void setXcoord(uint16_t i);                 // set the coordinate x axis
+void setYcoord(uint16_t f);                 // set the coordinate y axis
+void decideTurn();                          // detect the sense of turn
+void checkTurn();                           // check wether you have to turn or not
 void changeLane(uint8_t _tramo);
 bool setCoordTramo(uint8_t tramo, uint16_t leftCoord, uint16_t rightCoord);
 void correctLane(uint8_t _tramo);
 void changeDrivingDirection();
 
+// Camera related
 void moveCamera(int8_t angle);
 void autoMoveCamera();
 void enableCamera();
 
 void saveParkingPosition();
 
+// This one is for debugging
 void pitiditos(int num){
   while(num > 0){
     digitalWrite(pinBuzzer, HIGH);
@@ -294,12 +315,18 @@ void pitiditos(int num){
   }
 }
 
+// Waiting state
 void estadoEsperar(byte estadoObjetivo, uint16_t delay) {
   pitiditos(1);
   marcaMillis = millis() + delay;
   marcaEstado = estadoObjetivo;
   estado = e::Esperar;
 }
+
+
+
+// ***** SETUP CODE *****
+// This code will only run once, just after turning on the ESP32
 
 void setup() {
   // put your setup code here, to run once:
