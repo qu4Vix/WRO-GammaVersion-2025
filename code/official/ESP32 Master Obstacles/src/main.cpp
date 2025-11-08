@@ -279,6 +279,8 @@ void updatePosition();
 
 void saveParkingPosition();
 
+void teleEnviar();
+
 void pitiditos(int num){
   while(num > 0){
     digitalWrite(pinBuzzer, HIGH);
@@ -305,7 +307,8 @@ void setup() {
   teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
   #else
   // begin serial
-  Serial.begin(115200);
+  teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+  //Serial.begin(115200);
   #endif
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
@@ -454,13 +457,17 @@ void loop() {
   static uint32_t prev_ms_tele = millis();
   if (millis() > prev_ms_tele + 100)
   {
+    distancia0 = readDistance(0);
+    distancia90 = readDistance(90);
+    distancia270 = readDistance(270);
+
     /*FORMATO TELEMETRIA
     |inicioTX            |TipoPaquete|Datos|
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
    
-    for(int i = 0; i<4; i++){
+    /*for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
     teleSerial.write(04);
@@ -471,14 +478,14 @@ void loop() {
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
     }
-    /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
+    //ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
     teleSerial.write(03);
     uint16_t pi=0;
     while (pi < 360){
-        teleSerial.write(distancesArray[1][pi]);
+        teleSerial.write(distancesMillis[pi]);
         pi++;
     }*/
 
@@ -529,6 +536,13 @@ void loop() {
     teleSerial.write(byte(01));
     enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
     teleSerial.write(0x00);teleSerial.write(0x00);
+
+    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(byte(00));
+    teleSerial.write("TG: ");
+    teleSerial.write(totalGiros);
     
     prev_ms_tele = millis();
   }
@@ -567,8 +581,8 @@ void loop() {
     //firma1Detectada = firma2Detectada = false; choose what to do with this line too --------------------------------------------------------
     //objectivePosition = xPosition; //decide what to do with this line ----------------------------------------------------------------------
     //vTaskSuspend(TaskLidar);
-    lidarEnabled = false;
-    analogWrite(pinLIDAR_motor, 0);
+    //lidarEnabled = false;
+    //analogWrite(pinLIDAR_motor, 0);
     estado = e::Recto;
     setSpeed(NormalSpeed);
   break;
@@ -834,14 +848,19 @@ uint16_t readDistance(uint16_t angle) {
     }
   }
   // if the search fails return 0
-  return 0;
+  return 2;
 }
 
 // Create code for the task which manages the lidar
 void LidarTaskCode(void * pvParameters) {
   for (;;) {
     if (lidarEnabled) {
+      static uint32_t nextPitidito = 0;
       if (IS_OK(lidar.waitPoint())) {
+        /*if (millis()> nextPitidito){
+          pitiditos(1);
+          nextPitidito = millis() + 250;
+        }*/
         // record data
         uint16_t distance = uint16_t(lidar.getCurrentPoint().distance); //distance value in mm unit
         float angle    = lidar.getCurrentPoint().angle; //angle value in degrees
@@ -1392,15 +1411,16 @@ void saveParkingPosition() {
 
 void updatePosition() {
   setSpeed(0);
-  analogWrite(pinLIDAR_motor, 255);
+  //teleEnviar();
+  //analogWrite(pinLIDAR_motor, 255);
 
   for (int i = 0; i < 360; i++) {
     distances[i] = 0;
     distancesMillis[i] = 0;
   }
 
-  lidarEnabled = true;
-  delay(2000);
+  //lidarEnabled = true;
+  delay(500);
   if (turnClockWise)
   {
     yPosition=readDistance(180);
@@ -1410,8 +1430,84 @@ void updatePosition() {
     yPosition=readDistance(180);
     setXcoord(3000 - readDistance(90) - lidarToImu);
   }
-  delay(5000);
-  lidarEnabled = false;
-  analogWrite(pinLIDAR_motor, 0);
+  delay(500);
+  //lidarEnabled = false;
+  //analogWrite(pinLIDAR_motor, 0);
+  //teleEnviar();
   setSpeed(NormalSpeed);
+}
+
+void teleEnviar(){
+  /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
+   
+    for(int i = 0; i<4; i++){
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(04);
+    uint16_t zi=0;
+    while (zi < 360)
+    {
+        teleSerial.write(distances[zi]>>8);
+        teleSerial.write(distances[zi]&0x00ff);
+        zi++;
+    }
+    delay(500);
+    //ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
+    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(03);
+    uint16_t pi=0;
+    while (pi < 360){
+        teleSerial.write(distancesMillis[pi]);
+        pi++;
+    }
+    delay(1000);
+    /*ENVIAMOS PAQUETE TIPO 5 INFORMACION GENERAL*/
+    
+    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(byte(06));
+    unsigned long time = MIT;  //--------Si, si, todo eso...
+    long posXLong = long(xPosition);
+    long posYLong = long(yPosition);
+    long posXObjLong = long(objectivePosition);
+    long posYObjLong = (turnSense==-1)?1:(turnSense==1)?2:0;
+    long anguloLong = long(mimpu.GetAngle());
+    long anguloObjLong = long(objectiveDirection);
+    enviarDato((byte*)&time,sizeof(time));
+    enviarDato((byte*)&posXLong,sizeof(posXLong));
+    enviarDato((byte*)&posYLong,sizeof(posYLong));
+    enviarDato((byte*)&posXObjLong,sizeof(posXObjLong));
+    enviarDato((byte*)&posYObjLong,sizeof(posYObjLong));
+    enviarDato((byte*)&encoderMeasurement,sizeof(encoderMeasurement));
+    enviarDato((byte*)&estado,sizeof(estado));
+    enviarDato((byte*)&bateria,sizeof(bateria));
+    enviarDato((byte*)&anguloLong,sizeof(anguloLong));
+    enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
+    enviarDato((byte*)&tramo,sizeof(tramo));
+    enviarDato((byte*)&distancia0,sizeof(distancia0));
+    enviarDato((byte*)&distancia90,sizeof(distancia90));
+    enviarDato((byte*)&distancia270,sizeof(distancia270));
+    
+    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(byte(07));
+    enviarDato((byte*)&firma1Detectada,sizeof(firma1Detectada));
+    enviarDato((byte*)&firma1X,sizeof(firma1X));
+    enviarDato((byte*)&firma1Y,sizeof(firma1Y));
+    teleSerial.write(0x00);teleSerial.write(0x00);
+    enviarDato((byte*)&firma2Detectada,sizeof(firma2Detectada));
+    enviarDato((byte*)&firma2X,sizeof(firma2X));
+    enviarDato((byte*)&firma2Y,sizeof(firma2Y));
+    teleSerial.write(0x00);teleSerial.write(0x00);
+    
+    for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(byte(01));
+    enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
+    teleSerial.write(0x00);teleSerial.write(0x00);
 }

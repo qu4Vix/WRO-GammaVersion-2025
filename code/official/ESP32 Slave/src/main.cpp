@@ -257,10 +257,10 @@ void receiveData() {
 // Reads the current voltage of the battery
 void updateBattery() {
   uint16_t voltage = analogRead(pinVoltage) * totalConversionFactor; // battery voltage in V;
-  if (voltage >= 8) {
+  if (voltage >= 7.8) {
     // HIGH LEVEL
     sendVoltage(1);
-  } else if (voltage >= 7.6) {
+  } else if (voltage >= 7.5) {
     // MEDIUM LEVEL
     sendVoltage(2);
   } else {
