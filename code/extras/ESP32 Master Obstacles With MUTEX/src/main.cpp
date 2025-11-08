@@ -170,6 +170,12 @@ bool isParking = false;
 int32_t encoderMeasurement;
 int32_t prev_encoderMeasurement;
 
+int32_t loop_encoderMeasurement;
+int32_t loop_prev_encoderMeasurement;
+
+int32_t task_encoderMeasurement;
+int32_t task_prev_encoderMeasurement;
+
 // LiDAR measurement variables
 uint16_t distances[360];
 static uint16_t distancesMillis[360];
@@ -191,6 +197,7 @@ double loop_yPosition = 0; // To avoid problems with the semaphores
 
 // Stablishing the semaphore
 SemaphoreHandle_t mutex;
+SemaphoreHandle_t mutexEncoderMeasurement;
 
 // Starting positions and marquing variables
 double startXposition;
@@ -296,6 +303,8 @@ void changeLane(uint8_t _tramo);
 bool setCoordTramo(uint8_t tramo, uint16_t leftCoord, uint16_t rightCoord);
 void correctLane(uint8_t _tramo);
 void changeDrivingDirection();
+void readEncoderMeasurement();
+void writeEncoderMeasurement(int32_t f_encoderMeasurement, int32_t f_prev_encoderMeasurement);
 
 // Camera related
 void moveCamera(int8_t angle);
@@ -373,6 +382,7 @@ void setup() {
 
   // Created MUTEX
   mutex = xSemaphoreCreateMutex();
+  mutexEncoderMeasurement = xSemaphoreCreateMutex();
 
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
@@ -433,7 +443,11 @@ void setup() {
   }
   digitalWrite(pinLED_amarillo, LOW);
   #endif
-  prev_encoderMeasurement = encoderMeasurement;
+
+  readEncoderMeasurement();
+  loop_prev_encoderMeasurement = loop_encoderMeasurement;
+  writeEncoderMeasurement(loop_encoderMeasurement, loop_prev_encoderMeasurement);
+
   delay(500);
 
   // move camera away from parking lot
@@ -481,6 +495,11 @@ void loop() {
       yPosition += dy;
     }*/
     if (pidEnabled) {
+      if (xSemaphoreTake(mutex, portMAX_DELAY)) {
+        loop_xPosition = xPosition;
+        loop_yPosition = yPosition;
+        xSemaphoreGive(mutex);
+      }   
       iteratePositionPID();
     }
 
@@ -507,6 +526,8 @@ void loop() {
   static uint32_t prev_ms_tele = millis();
   if (millis() > prev_ms_tele + 100)
   {
+    
+    readEncoderMeasurement();
     
     /*FORMATO TELEMETRIA
     |inicioTX            |TipoPaquete|Datos|
@@ -555,7 +576,7 @@ void loop() {
     enviarDato((byte*)&posYLong,sizeof(posYLong));
     enviarDato((byte*)&posXObjLong,sizeof(posXObjLong));
     enviarDato((byte*)&posYObjLong,sizeof(posYObjLong));
-    enviarDato((byte*)&encoderMeasurement,sizeof(encoderMeasurement));
+    enviarDato((byte*)&loop_encoderMeasurement,sizeof(loop_encoderMeasurement));
     enviarDato((byte*)&estado,sizeof(estado));
     enviarDato((byte*)&bateria,sizeof(bateria));
     enviarDato((byte*)&anguloLong,sizeof(anguloLong));
@@ -823,10 +844,12 @@ void receiveData() {
   if (firstByte == 7) { // Encoder data
     uint8_t bytes[4];
     commSerial.readBytes(bytes, 4);
-    encoderMeasurement = 0;
+    readEncoderMeasurement();
+    loop_encoderMeasurement = 0;
     for (uint8_t iteration; iteration < 4; iteration++) {
-      encoderMeasurement = encoderMeasurement | bytes[iteration] << (8*iteration);
+      loop_encoderMeasurement = loop_encoderMeasurement | bytes[iteration] << (8*iteration);
     }
+    writeEncoderMeasurement(loop_encoderMeasurement,loop_prev_encoderMeasurement);
   } else
   if (firstByte == 6) { // Batery voltage
     uint8_t tensionValue;
@@ -959,12 +982,21 @@ void LidarTaskCode(void * pvParameters) {
       mimpu.UpdateAngle();
       static uint32_t prev_ms_position = millis();
       if (millis() >= prev_ms_position) {
-        if (encoderMeasurement != prev_encoderMeasurement) {
+
+        if (xSemaphoreTake(mutexEncoderMeasurement, portMAX_DELAY)) {
+          task_encoderMeasurement = encoderMeasurement;
+          task_prev_encoderMeasurement = prev_encoderMeasurement;
+          xSemaphoreGive(mutexEncoderMeasurement);
+        }
+
+        if (task_encoderMeasurement != task_prev_encoderMeasurement) {
           // calculate the increment in position and add it
-          double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-          double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-          //MIT = encoderMeasurement - prev_encoderMeasurement;
-          prev_encoderMeasurement = encoderMeasurement;
+          double dy = (task_encoderMeasurement - task_prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+          double dx = (task_encoderMeasurement - task_prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+          //MIT = task_encoderMeasurement - task_prev_encoderMeasurement;
+          task_prev_encoderMeasurement = encoderMeasurement;
+          
+          writeEncoderMeasurement(task_encoderMeasurement, task_prev_encoderMeasurement);
 
           if (xSemaphoreTake(mutex, portMAX_DELAY))
           {
@@ -984,7 +1016,7 @@ void LidarTaskCode(void * pvParameters) {
 }
 
 //NOT IN USE
-void iteratePosition(void * pvParameters) {
+/*void iteratePosition(void * pvParameters) {
   for (;;) {
     mimpu.UpdateAngle();
     static uint32_t prev_ms_position = millis();
@@ -1003,6 +1035,7 @@ void iteratePosition(void * pvParameters) {
     taskYIELD();
   }
 }
+*/
 
 void iteratePositionPID() {
 
@@ -1494,12 +1527,31 @@ void updatePosition() {
   analogWrite(pinLIDAR_motor, 255);
   lidarEnabled = true;
   IMUEnabeld = false;
-  delay(500);
-  setYcoord(readDistance(90));
-  setXcoord(readDistance(0));
+  delay(2000);
+  if (turnClockWise)
+  {
+    setYcoord(readDistance(270));
+    setXcoord(readDistance(0));
+  }
+  else{
+    setYcoord(readDistance(90));
+    setXcoord(33000 - readDistance(0));
+  }
   delay(5000);
   IMUEnabeld = true;
   lidarEnabled = false;
   analogWrite(pinLIDAR_motor, 0);
   setSpeed(NormalSpeed);
+}
+
+void readEncoderMeasurement() {
+  
+}
+
+void writeEncoderMeasurement(int32_t f_encoderMeasurement, int32_t f_prev_encoderMeasurement) {
+  if (xSemaphoreTake(mutexEncoderMeasurement, portMAX_DELAY)) {
+    encoderMeasurement = f_encoderMeasurement;
+    prev_encoderMeasurement = f_prev_encoderMeasurement;
+    xSemaphoreGive(mutexEncoderMeasurement);
+  }
 }

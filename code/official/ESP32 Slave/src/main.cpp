@@ -155,14 +155,17 @@ void loop() {
   static uint32_t prev_ms_bat = millis();
   if (millis() > prev_ms_bat) {
     updateBattery();
-    prev_ms_bat = millis() + 1000;
+    prev_ms_bat = millis() + 500;
   }
 
   // Sends the measurements of the encoder
-  encoderMeasurement = miencoder.GetEncoder();
-  if ((encoderMeasurement - prev_encoderMeasurement) >= 2) {
-    prev_encoderMeasurement = encoderMeasurement;
+  //encoderMeasurement = miencoder.GetEncoder();
+  static uint32_t prev_ms_encoder = millis();
+  //if ((encoderMeasurement - prev_encoderMeasurement) >= 6) {
+  if (millis() > prev_ms_encoder) {
+    //prev_encoderMeasurement = encoderMeasurement;
     sendEncoder(miencoder.GetEncoder());
+    prev_ms_encoder = millis() + 32;
   }
 
   // Sends the position and type of the nearest block detected by the camera
@@ -185,9 +188,9 @@ void IRAM_ATTR onTimer() {
 }
 
 // Sends back to the master the encoder information using our own communication protocol
-void sendEncoder(uint32_t encoder) {
-  uint8_t encoderBuffer[4];
-  for (uint8_t i; i<4; i++) {
+void sendEncoder(u_int32_t encoder) {
+  u_int8_t encoderBuffer[4];
+  for (u_int8_t i; i<4; i++) {
     encoderBuffer[i] = ((encoder>>(8*i)) & 0xff);
   }
   commSerial.write(7);

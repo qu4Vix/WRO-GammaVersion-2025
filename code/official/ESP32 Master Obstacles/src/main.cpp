@@ -112,6 +112,12 @@ uint8_t estado = e::Arrancar;
 
 // journey variables
 
+// Variable vueltas
+byte vueltas = 0;
+
+
+
+
 // number of turns
 uint8_t giros = 0;
 uint8_t totalGiros = 0;
@@ -269,6 +275,7 @@ void changeDrivingDirection();
 void moveCamera(int8_t angle);
 void autoMoveCamera();
 void enableCamera();
+void updatePosition();
 
 void saveParkingPosition();
 
@@ -411,19 +418,20 @@ void loop() {
   }
 
   // update mpu's angle
-  //mimpu.UpdateAngle();
+  mimpu.UpdateAngle();
 
   // repeat position functions every 32ms
   static uint32_t prev_ms_position = millis();
   if (millis() >= prev_ms_position) {
-    /*if (encoderMeasurement != prev_encoderMeasurement) {
+    if (encoderMeasurement != prev_encoderMeasurement) {
       // calculate the increment in position and add it
       double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
       prev_encoderMeasurement = encoderMeasurement;
       xPosition -= dx; // x -> + derecha - izquierda
       yPosition += dy;
-    }*/
+
+    }
     if (pidEnabled) {
       iteratePositionPID();
     }
@@ -451,7 +459,7 @@ void loop() {
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
-   /*
+   
     for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
@@ -462,7 +470,7 @@ void loop() {
         teleSerial.write(distances[zi]>>8);
         teleSerial.write(distances[zi]&0x00ff);
         zi++;
-    }*/
+    }
     /*/ENVIAMOS PAQUETE TIPO 3 CALIDAD MEDIDA/
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
@@ -804,7 +812,6 @@ uint16_t readDistance(uint16_t angle) {
     f_distances[i] = distances[i];
     f_distancesMillis[i] = distancesMillis[i];
   }
-  
 
   while (index < numberOfMeasures) {
     // work out the resultant index for the distances array
@@ -841,7 +848,7 @@ void LidarTaskCode(void * pvParameters) {
 
         // obtain the index associated with the angle and store in the array
 
-        float angulo = angle - mimpu.GetAngle();
+        float angulo = angle - mimpu.GetAngle() + 360 * vueltas * turnSense;
         if (angulo < 0)
         {
           angulo = 360 + angulo;
@@ -865,7 +872,7 @@ void LidarTaskCode(void * pvParameters) {
         }
       }
     }
-    mimpu.UpdateAngle();
+    /*mimpu.UpdateAngle();
     static uint32_t prev_ms_position = millis();
     if (millis() >= prev_ms_position) {
       if (encoderMeasurement != prev_encoderMeasurement) {
@@ -877,13 +884,13 @@ void LidarTaskCode(void * pvParameters) {
         yPosition += dy;
       }
       prev_ms_position = millis() + 32;
-    }
+    }*/
     // Try running other tasks after each iteration
     vTaskDelay(1);
   }
 }
 
-void iteratePosition(void * pvParameters) {
+/*void iteratePosition(void * pvParameters) {
   for (;;) {
     mimpu.UpdateAngle();
     static uint32_t prev_ms_position = millis();
@@ -902,6 +909,7 @@ void iteratePosition(void * pvParameters) {
     taskYIELD();
   }
 }
+*/
 
 void iteratePositionPID() {
   prev_positionError = positionError;
@@ -945,6 +953,7 @@ void turn() {
     fixInverted = true;
     fixXposition = true;
     tramo = 0;
+    vueltas++;
     break;
   
   case 2:
@@ -973,6 +982,7 @@ void turn() {
     fixInverted = true;
     fixXposition = true;
     tramo = 0;
+    vueltas++;
     break;
   }
   giros++;
@@ -1036,7 +1046,10 @@ void checkTurn() {
 
   case -8:
     if ((xPosition >= 1400) && (setCoordTramo(7, 200, 800))) correctLane(7);
-    if (xPosition <= 1000) turn();
+    if (xPosition <= 1000) {
+      updatePosition();
+      turn();
+    }
     break;
 
   case 1:
@@ -1080,7 +1093,10 @@ void checkTurn() {
 
   case 8:
     if ((xPosition <= 1600) && (setCoordTramo(7, 800, 200))) correctLane(7);
-    if (xPosition >= 2000) turn();
+    if (xPosition >= 2000){
+      updatePosition();
+      turn();
+    }
     break;
   }
 }
@@ -1372,4 +1388,30 @@ void saveParkingPosition() {
   } else {
     parkingY = 1935;
   }
+}
+
+void updatePosition() {
+  setSpeed(0);
+  analogWrite(pinLIDAR_motor, 255);
+
+  for (int i = 0; i < 360; i++) {
+    distances[i] = 0;
+    distancesMillis[i] = 0;
+  }
+
+  lidarEnabled = true;
+  delay(2000);
+  if (turnClockWise)
+  {
+    yPosition=readDistance(180);
+    setXcoord(readDistance(270) + lidarToImu);
+  }
+  else{
+    yPosition=readDistance(180);
+    setXcoord(3000 - readDistance(90) - lidarToImu);
+  }
+  delay(5000);
+  lidarEnabled = false;
+  analogWrite(pinLIDAR_motor, 0);
+  setSpeed(NormalSpeed);
 }

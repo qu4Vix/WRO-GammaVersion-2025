@@ -24,7 +24,7 @@ class Encoder{
     public:
     Encoder(byte pinEncoder);
     void Attach(byte mode);
-    unsigned long GetEncoder();
+    long GetEncoder();
     long GetEncoderInterval();
     void SetMotionDirection(bool forward);
 
@@ -34,7 +34,7 @@ class Encoder{
     void _updateEncoder();
     byte _pinEncoder;
     volatile long _encoder;
-    volatile unsigned long _encoderTotal = 8192; // Inicializado a un numero grande para que nunca sea negativo
+    volatile long _encoderTotal = 8192; // Inicializado a un numero grande para que nunca sea negativo
     bool _forward;
 };
 
