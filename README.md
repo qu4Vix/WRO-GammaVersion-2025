@@ -31,6 +31,8 @@
 
 * [Credits](#credits)
 
+* [Contact and Social Media](#contact-and-social-media)
+
 ## HARDWARE
 Designing a self-driving car for these challenges requires a meticulous design process to achieve an optimal final result that meets the needs of the challenge and the potential obstacles that may arise during the programming process and the competition itself.
 
@@ -44,6 +46,8 @@ With these changes to the turning system we have implemented the **Ackerman's St
 | | |
 | ------------------------- | ------------------------- |
 | ![ ](./photos/readme-photos/Ackerman's%20Steering%20Geometry%20diagram.png) | ![ ](./photos/readme-photos/Ackerman's%20Steering%20Geometry%20in%20our%20robot.png) |
+
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/implementatation-ackerman.jpg?raw=true" width="800">
 
 More information about Ackerman's Steering Geometry can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Ackermann_steering_geometry).
 
@@ -139,7 +143,7 @@ The LED was connected directly to the battery and main power switch, ensuring th
 
 After the competition, we analyzed that the camera still had occasional problems, and we eventually redesigned the camera's code to avoid these issues. Our robot still has the space and components necessary to reinstall the LED if we deem it necessary during the competition, although, as we have already mentioned, this shouldn't be the case.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Placeholder%20F.004.png?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Camera%20LED.jpg?raw=true" width="500">
 
 ### Sensor list
 
@@ -170,6 +174,8 @@ Our custom PCB design allowed for cleaner wiring, reduced interference, and enha
 <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB%20Design.jpg?raw=true" width="800">
 
 <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Schematic%20PCB.png?raw=true" width="800">
+
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB-real.jpg?raw=true" width="800">
 
 ## STRATEGY AND OPERATION OF THE CODE
 
@@ -235,7 +241,7 @@ Demonstration videos of the car successfully completing both challenges. The lin
 * [Open Challenge](https://youtu.be/jVDG6yYy9Xo)
 * [Obstacle Challenge](https://youtu.be/SR2mRw_vzmI)
 
-## License
+## LICENSE
 
 The [source code](/code/) in this repository is licensed under the **GNU General Public License v3.0**.
 
@@ -245,8 +251,25 @@ The documentation of this repository; found in [`robot-info`](/robot-info/), [`v
 
 A copy of each license can be found in the [LICENSE](LICENSE) file. More information about the licenses in the specific README.md of each section.
 
-## Credits
+## CONTACT AND SOCIAL MEDIA
+This year, as we approached this challenge once again, we decided to resume our presence on social media through our Instagram account ([@gammaversiondiverbot](https://www.instagram.com/gammaversiondiverbot/)). With this account, we have been actively sharing our progress and journey from the beginning to the present day.
 
-We would like to thank DiverBOT and its team Javier and Ana for their help material given to this project.
+Furthermore, immediately after winning the WRO 2025 National Final in Spain we launched a website to showcase our team more openly and professionally, especially to find sponsors willing to help us cover the costs of traveling to Singapore. We share this website with another team from our academy that also participates in the competition under the name "Alfa Centauri."
+
+In addition to seeking companies and entrepreneurs willing to support us, we created a crowdfunding page on the [gofundme.com](https://www.gofundme.com/f/ayudanos-a-llegar-a-Singapur-tu-aporte-suma) platform to more easily receive donations from individuals. Finally, we've created a small raffle where we're giving away a laptop with the aim of raising a little more funding and involving the community in the project.
+
+We have also appeared on several local and regional newspaper, radio stations and TV programs
+
+HERE ARE OUR CONTACT AND DISSEMINATION PLATFORMS
+
+*(To attract a local audience, some information on these sites is in Spanish.)*
+
+* INSTAGRAM: [@gammaversiondiverbot](https://www.instagram.com/gammaversiondiverbot/)
+* WEBPAGE [singapur2025.diverbot.es](http://singapur2025.diverbot.es/)
+* CROWDFUNDING: [gofundme.com/f/ayudanos-a-llegar-a-Singapur-tu-aporte-suma](https://www.gofundme.com/f/ayudanos-a-llegar-a-Singapur-tu-aporte-suma)
+
+## CREDITS
+
+We would like to thank DiverBOT and its team Javier and Ana for their help given to this project.
 
 
