@@ -32,6 +32,8 @@
 * [Credits](#credits)
 
 * [Contact and Social Media](#contact-and-social-media)
+  
+![vehicle-turning-medium-quality](https://github.com/user-attachments/assets/6cb0ceba-7286-47a0-9f8f-3fc83ab8c871)
 
 ## HARDWARE
 Designing a self-driving car for these challenges requires a meticulous design process to achieve an optimal final result that meets the needs of the challenge and the potential obstacles that may arise during the programming process and the competition itself.
