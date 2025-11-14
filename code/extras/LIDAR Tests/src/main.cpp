@@ -111,6 +111,7 @@ void Task1Code(void * pvParameters) {
         Serial.println("StartBit");
         provisionalStorage = new lidarStorage(measurementsIndex);
         provisionalStorage->setArray(lidarBuffer, measurementsIndex);
+        // reset the index to start storing the new measurements
         measurementsIndex = 0;
         // indicate that the provisional storage is to be loaded
         loadData = true;
@@ -139,12 +140,17 @@ void Task1Code(void * pvParameters) {
 
 // Angle from 0 to 359
 float readDistance(uint16_t angle) {
+  // return if the storage pointer is not defined to prevent load prohibiteds
   if (pStorage == nullptr) return 0;
+  // stop the program until we stop writing
   while (writing);
+  // create an array of lines to store the output of the RANSAC algorithm
   Line2D lines[MAX_LANDMARKS];
+  // start reading, execute the RANSAC algorithm, store the output (the number of lines measured) and stop reading
   reading = true;
   int output = exeRANSAC(pStorage, lines, 0);
   reading = false;
+  // if no lines were measured, the output will be -1. exit the function and return 0
   if (output == -1) {
     return 0;
   }
@@ -153,11 +159,13 @@ float readDistance(uint16_t angle) {
     Point2D perp = PerpPointOnLine(lines[l], Point2D{0,0});
     polarLines[l];
   }*/
+ // for each line returned by the RANSAC algorithm, calculate the angle of the line and return the distance to the line with angle within 5 degrees from the requested angle
   for (uint8_t l = 0; l < output; l++) {
     Serial.println(180/PI*atan(lines[l].a));
     if (abs(180/PI*atan(lines[l].a) - angle) < 5) {
       return DistanceToLine(lines[l], Point2D{0,0});
     }
   }
+  // if no line is within the angle desired return 0
   return 0;
 }
