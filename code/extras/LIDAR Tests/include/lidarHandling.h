@@ -17,11 +17,13 @@ class lidarStorage {
     Point2D * convertToCartesian();
     inline polarPoint2D getMeasurement(uint16_t index);
   private:
-    Point2D * cartesianData;
     uint16_t index = 0;
     uint16_t _size;
+    Point2D * cartesianData;
     polarPoint2D * _data;
 };
+
+extern int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBuffer);
 
 lidarStorage::lidarStorage(uint16_t size) : _size(size) {
   _data = new polarPoint2D[_size];
@@ -65,7 +67,8 @@ inline polarPoint2D lidarStorage::getMeasurement(uint16_t index) {
 }
 
 #define SPIKE_JUMP 250
-void findBlocks(polarPoint2D * dataBuffer, uint8_t size) {
+// Finds blocks from the full measurement array
+void findBlocks(polarPoint2D * dataBuffer, uint16_t size) {
   uint8_t spikes[size];
   uint8_t spikeRecord = 0;
   for (uint8_t i = 0; i < size - 1; i++) {
