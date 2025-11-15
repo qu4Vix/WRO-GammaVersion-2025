@@ -137,6 +137,8 @@ bool isParking = false;
 int32_t encoderMeasurement;
 int32_t prev_encoderMeasurement;
 
+double prev_angleMagico;
+
 // lidar measurement variables
 
 uint16_t distances[360];
@@ -329,6 +331,7 @@ void setup() {
   // configure the mpu
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
+  delay(3000);
   mimpu.WorkOffset();
   //pitiditos(2);
   // begin the lidar
@@ -396,6 +399,7 @@ void setup() {
   digitalWrite(pinLED_amarillo, LOW);
   #endif
   prev_encoderMeasurement = encoderMeasurement;
+  prev_angleMagico = mimpu.GetAngle();
   delay(500);
 
   // move camera away from parking lot
@@ -407,9 +411,12 @@ void setup() {
   // set the objective position of the unparking and activate the PID
   objectivePosition = 2500-2000*turnClockWise;
   pidEnabled = true;
-  // start driving (set a speed to the car and initialize the mpu)
-  setSpeed(StartSpeed);
+  // start driving (set a speed to the car and initialize the mpu) 
   mimpu.MeasureFirstMicros();
+
+
+  
+  setSpeed(StartSpeed);
 }
 
 void loop() {
@@ -429,9 +436,24 @@ void loop() {
   if (millis() >= prev_ms_position) {
     if (encoderMeasurement != prev_encoderMeasurement) {
       // calculate the increment in position and add it
-      double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-      double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+
+      double angulomagico = mimpu.GetAngle();
+      uint32_t incrementoMagico = encoderMeasurement - prev_encoderMeasurement;
+      double da = (angulomagico - prev_angleMagico) / incrementoMagico;
+
+      /*double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      double dx = (encoderMeasurement - prev_encoderMeasurement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;*/
+
+      double dy = 0;
+      double dx = 0;
+      for (int i = 1; i <= incrementoMagico; i++)
+      {
+        dy = dy + cos((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
+        dx = dx + sin((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
+      }
+
       prev_encoderMeasurement = encoderMeasurement;
+      prev_angleMagico = mimpu.GetAngle();
       xPosition -= dx; // x -> + derecha - izquierda
       yPosition += dy;
 
@@ -1422,11 +1444,11 @@ void saveParkingPosition() {
 void updatePosition() {
   setSpeed(0);
 
-  uint32_t temptime = millis() + 2000;
-  while (millis() < temptime)
+  //uint32_t temptime = millis() + 2000;
+  /*while (millis() < temptime)
   {
 
-  }
+  }*/
 
 
   //teleEnviar();
@@ -1440,11 +1462,12 @@ void updatePosition() {
   lidarEnabled = true;
   //pitiditos(3);
 
-  temptime = millis() + 2000;
-  while (millis() < temptime)
+  //temptime = millis() + 2000;
+  /*while (millis() < temptime)
   {
 
   }
+  */
 
   if (turnClockWise)
   {
@@ -1456,8 +1479,9 @@ void updatePosition() {
     uint32_t tmax = millis() + 8000;
     bool diditfail = false;
 
-    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 100){
-      delay(100);
+    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 200){
+      mimpu.GetAngle();
+      delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
@@ -1465,8 +1489,9 @@ void updatePosition() {
       }
     } 
     tmax = millis() + 8000;
-    while( (xtemp = readDistance(270)) < 10 || abs((xtemp + lidarToImu - xPosition)) > 100){
-      delay(100);
+    while( (xtemp = readDistance(270)) < 10 || abs((xtemp + lidarToImu - xPosition)) > 200){
+      mimpu.GetAngle();
+      delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
@@ -1487,8 +1512,9 @@ void updatePosition() {
     uint32_t tmax = millis() + 8000;
     bool diditfail = false;
 
-    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 100){
-      delay(100);
+    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 200){
+      mimpu.GetAngle();
+      delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
@@ -1496,8 +1522,9 @@ void updatePosition() {
       }
     } 
     tmax = millis() + 8000;
-    while( (xtemp = readDistance(90)) < 10 || abs((3000 - xtemp - lidarToImu - xPosition)) > 100){
-      delay(100);
+    while( (xtemp = readDistance(90)) < 10 || abs((3000 - xtemp - lidarToImu - xPosition)) > 200){
+      mimpu.GetAngle();
+      delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;

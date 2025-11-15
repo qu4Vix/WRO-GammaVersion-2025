@@ -60,19 +60,32 @@ void MPU::WorkOffset() {
             num++;
             tot += _mpu.getGyroZ();
         }
-        delay(5);
+        //delay(5);
     }
-    _offset = tot / (micros() - offset_time);
+    _offset = tot / num; //1000;//((micros() - offset_time) / double(1000000));
     Serial.println("Offset = " + String(_offset));
 }
 
-void MPU::UpdateAngle() {
+/*void MPU::UpdateAngle() {
     if (_mpu.update()) {
         unsigned long sampleDuration = micros() - _prev_us_angle;
         float gyroZ = _mpu.getGyroZ();
         _prev_us_angle = micros();
         _angle += ((gyroZ - _offset) * sampleDuration / double(1000000));
         //Serial.println(_angle);
+    }
+}*/
+
+void MPU::UpdateAngle() {
+    if (_mpu.update()) {
+
+        unsigned long now = micros();
+        float dt = (now - _prev_us_angle) * 1e-6f; // segundos
+        _prev_us_angle = now;
+
+        float gyroZ = _mpu.getGyroZ() - _offset;
+
+        _angle += gyroZ * dt;
     }
 }
 
