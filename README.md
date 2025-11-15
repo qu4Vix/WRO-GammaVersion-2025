@@ -211,11 +211,34 @@ With the information from the previous paragraph in mind, our strategy is based 
 
 ### Obstacle Challenge Strategy
 
-In the Obstacle Challenge, the robot must complete three laps of the circuit, dodging the colored blocks so that the red block passes on the right and the green block on the left. Additionally, after completing the laps, the robot can park in the parking area marked with purple barriers. It can also start in this area for bonus points.
-	
-In our car, the straight sections of the board are organized into imaginary lanes, so that when the robot detects a colored block, it changes lanes or stays in the one it's currently in to pass on the correct side.
+The goal in the Obstacle Challenge is for the robot to complete three laps of the circuit, dodging the green blocks or "traffic lights" on the left and the red blocks on the right without colliding with them or making any mistakes. To earn more points, you can optionally start from the parking area (defined by two horizontal barriers) instead of the middle of the board. You can also optionally park inside the parking area, earning even more points if you parallel park.
 
-Due to the limited vision of our camera, the robot rotates the camera with a servo to view the blocks from the best angle for detection. Then, to park, we use several sensors installed on the sides of the robot.
+Our code is designed to always start from the parking area. Therefore, at the beginning of each round, we use LiDAR to measure both sides of the robot (left and right) to determine the greater distance. If the distance is greater to the right than to the left, the robot knows the direction of rotation is clockwise, while if it detects a greater distance to the left, it knows the direction is counterclockwise. Once we know the direction of rotation, we use the distance to the central wall to establish our position on the board, following our own system that we discussed earlier. The algorithm is as follows:
+
+* If (Clockwise == True) PositionX = 1000 – LiDAR_Measurement (90º);
+* If (Clockwise == True) PositionX = 2000 + LiDAR_Measurement (270º);
+
+Knowing the X position, the robot is now able to leave the parking area. However, to prevent accidentally passing a traffic light immediately after exiting, the camera's servo motor points directly to where a block might be located, to check for its presence.
+
+Before continuing, it's important to explain several key aspects of how our code works:
+
+* First, we designed a complex and useful automatic movement system where we tell the robot which X and Y position we want it to move to, and it performs the movement on its own. This way, if you look at our code, you'll see that we rarely send commands directly to the motors or the wheel servo, but rather to the movement instructions. The movement is complemented by a PID controller with KD and KP values that we can vary along the robot's path as needed.
+
+* Second, internally we divide the board into four "sections" that represent each non-turning section.
+* Third, our robot never considers whether the blocks are in the inner or outer squares; whenever it sees a block, it will avoid it in such a way that it never crosses any square.
+
+Having said that, to exit the parking area, we programmed our motion system to leave by assigning it coordinates located next to the parking lot. Once this was done, we used LiDAR to measure the external barrier above the robot. We used trigonometry so that even if the robot wasn't 100% parallel or perpendicular to the upper barrier, it would still provide correct directions, regardless of whether the robot was slightly tilted relative to the barrier.
+
+If there had been a block upon exiting the parking area, the robot would have avoided it. After exiting and avoiding the block, if necessary, the code would enter the "avoid and learn" state. In this state, the robot completed one lap of the circuit, reading the colors of the blocks with the camera and avoiding them on the correct side.
+
+Because the wide-angle lens of our camera wasn't very good, we decided to install a servo motor underneath the camera to move it and ensure that the camera always pointed where blocks might be. This mechanism is really important for tight turns, where there's a chance that if the camera were fixed, the robot wouldn't see the next block before missing it or crashing.
+
+In this first "state," in addition to reading the camera, the robot is memorizing the position of each traffic light. After completing the first lap, the robot performs the next two laps "from memory," without using the camera at any point. We do this because every time we measure the blocks with the camera, there's a small chance the robot will make a mistake. It's true that it can also make a mistake on the first lap, but if this happens, we would have already finished the lap, as it ends as soon as a mistake is made, according to the regulations. If we haven't stopped after the first lap, it means we already know the position of the traffic lights well, so it's best to perform them from memory instead of continuing to maintain the probability of error.
+
+When the robot reaches the last corner of each lap, it stops, remaining perpendicular to the external barrier in front of it, to recalibrate its position using LiDAR. We didn't originally intend to do this, but after extensive testing, we realized that the IMU and encoder lost accuracy and quality throughout the lap, especially if the robot had to perform many maneuvers.
+
+Finally, after the three laps and the final recalibration, the robot enters "parking" mode. It then slowly approaches the parking position, maneuvers back slowly, and finally parks. In this mode, we significantly increased the turning radius (KP) and turning radius (KD) to maximize the robot's turning capabilities and enable it to park in the limited available space.
+
 
 ## PHOTOS
 
