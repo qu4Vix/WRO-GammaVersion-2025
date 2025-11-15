@@ -88,7 +88,8 @@ enum e {
   Aparcar35,
   Aparcar4,
   Esperar,
-  Prueba
+  Prueba,
+  Aparcar5
 };
 uint8_t estado = e::Arrancar;
 
@@ -438,7 +439,7 @@ void loop() {
       // calculate the increment in position and add it
 
       double angulomagico = mimpu.GetAngle();
-      uint32_t incrementoMagico = encoderMeasurement - prev_encoderMeasurement;
+      int32_t incrementoMagico = encoderMeasurement - prev_encoderMeasurement;
       double da = (angulomagico - prev_angleMagico) / incrementoMagico;
 
       /*double dy = (encoderMeasurement - prev_encoderMeasurement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
@@ -446,10 +447,10 @@ void loop() {
 
       double dy = 0;
       double dx = 0;
-      for (int i = 1; i <= incrementoMagico; i++)
+      for (int i = 1; i <= abs(incrementoMagico); i++)
       {
-        dy = dy + cos((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
-        dx = dx + sin((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
+        dy = dy + motionDirection * cos((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
+        dx = dx + motionDirection * sin((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
       }
 
       prev_encoderMeasurement = encoderMeasurement;
@@ -618,6 +619,7 @@ void loop() {
     }
   break;
   case e::Final:  // we probably want to be redirected to here after we finish the parking manouver ---------------------------------------------
+    setSteering(0);
     if (yPosition >= 1200) {
       setSpeed(0);
     }
@@ -722,14 +724,27 @@ void loop() {
 
   case e::Aparcar4:
     if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 5) {
-      setSpeed(0);
-      estado = e::Final;
+      if ((mimpu.GetAngle()*turnSense - 90*totalGiros) < 3){
+        setSpeed(StartSpeed);
+      estado = e::Aparcar5;
+      }
+      else{
+        setSpeed(0);
+        estado = e::Final;
+      }
     }
   break;
 
   case e::Esperar:
     if (millis() >= marcaMillis) {
       estado = marcaEstado;
+    }
+  break;
+
+  case e::Aparcar5:
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 3){
+      setSpeed(0);
+      estado = e::Final;
     }
   break;
   }
