@@ -1,98 +1,534 @@
+/***************************************************
+ * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
+ * 
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
+ * 
+****************************************************/
+
+/***************************************************
+ * 
+ * This is the code for a test on the LIDAR, using the "Main" ESP32 of our robot, which it is responsible for controlling
+ * some sensors and to make all the decisions.
+ * 
+ * THIS VERSION OF THE ESP32 MASTER CODE IS ONLY FOR TESTING THE LIDAR
+ * For the Official code use "ESP32 MASTER OBSTACLES"
+ *  
+****************************************************/
+
+
+
+// ***** INCLUDING THE LIBRARIES *****
+
 #include <Arduino.h>
+#include <AdvancedMPU.h>
 #include <RPLidar.h>
-#include <esp_task_wdt.h> 
-
-#include "ransacAlgorithm.h"
+#include "pinAssignments.h"
+#include <rom/rtc.h>
+#include <esp_task_wdt.h>
 #include "lidarHandling.h"
+#include "ransacAlgorithm.h"
 
-#define PIN_LIDAR_MOTOR 5 // The PWM pin for control the speed of RPLIDAR's motor.
-#define PIN_LED_Red 12
-#define PIN_LED_Blue 13
-#define PIN_BUTTON 33
 
-HardwareSerial lidarSerial(2);
-RPLidar lidar;
 
-TaskHandle_t Task1;
+// ***** DEFINES *****
+
+// This enables the transmission of telemetry used for debugging. In normal situations it is not needed to set this define to FALSE.
+#define ENABLE_TELEMETRY false
+
+// Speeds
+#define StartSpeed 4
+#define CruisiereSpeed 8
+#define NormalSpeed 7
+
+// Servo and direction variables
+#define servoKP 2.5
+#define servoKD 0
+
+// Position PID controller variables
+#define positionKP 0.35
+#define positionKD 2.5
+
+
+
+// ***** INITIALIZING VARIABLES, OBJECTS AND FUNCTIONS *****
+
+// Direction related variables
+int prev_setAngle;
+int actual_directionError;
+int prev_directionError;
+float objectiveDirection;
+
+// Battery level variable
+uint8_t bateria;
+
+// Conversion between mm and encoder counts
+#define MMperEncoder 1.543
+
+// List of possible states for the car
+enum e {
+  Inicio,
+  Recto,
+  Final,
+  Prueba
+};
+uint8_t estado = e::Inicio;
+
+// Size of the map (mm)
+#define mapSize 3000
+
+// Journey variables
+uint8_t giros = 0;
+uint8_t tramo = 0;
+int8_t turnSense = 0;       // We don't know it at the beginning
+int8_t motionDirection = 0; // The car doesn't move at the beginning
+
+// Encoder variables
+u_int32_t encoderMeasurement;
+u_int32_t prev_encoderMeasurement;
+
+// Car position on the map (origin at the bottom-left corner)
+double xPosition = 0;   // x position of the car (increases to the right)
+double yPosition = 0;   // y position of the car (increases upwards)
+
+// Position PID controller variables
+int objectivePosition = 0;
+int positionError;
+int prev_positionError;
+bool fixXposition = true;
+bool fixInverted = true;
+
+volatile bool reading = false;
+volatile bool writing = false;
 
 polarPoint2D lidarBuffer[500];
 uint16_t measurementsIndex = 0;
 lidarStorage * pStorage = new lidarStorage(1);
 
-bool reading = false;
-bool writing = false;
+// Object declarations
+MPU mimpu;
+HardwareSerial lidarSerial(2);
+RPLidar lidar;
+HardwareSerial commSerial(1);
+TaskHandle_t LidarTask;
+HardwareSerial teleSerial(0);
 
-uint16_t blockPositions[2][12][2] = {
-  // Clockwise
-  {
-    {}
-  }
-};
+double distancia90;
+double distancia270;
 
-void Task1Code(void * pvParameters);
-float readDistance(uint16_t angle);
+// Declarations
+int directionError(int bearing, int target);  // calculate the error in the direction
 
-// put your setup code here, to run once:
+// ESP32 intercommunication functions 
+void setSpeed(int speed);             // set the car's speed
+void setSteering(int angle);          // set the angle of the servo
+void receiveData();                   // receive data from the serial
+void manageTension(uint8_t tension);  // turn a led on depending on the tension received
+
+// LIDAR management variables
+double readDistance(uint16_t angle);    // Angle from 0 to 359
+void LidarTaskCode(void * pvParameters);  // Create code for the task which manages the LIDAR
+
+// Send a piece of data to the telemetry esp32
+void enviarDato(byte* pointer, int8_t size);
+void sendPacket(byte packetType, byte* packet);
+
+// Functions for the management of the car's position
+void iteratePositionPID();    // invoke an iteration of the pid controller for the position
+void turn();                  // turn
+void setXcoord(uint16_t i);   // set the coordinate x axis
+void setYcoord(uint16_t f);   // set the coordinate y axis
+void decideTurn();            // detect the sense of turn
+void checkTurn();             // check wether you have to turn or not
+
+
+
+// ***** SETUP CODE *****
+// This code will only run once, just after turning on the ESP32
+
 void setup() {
-  pinMode(PIN_LIDAR_MOTOR, OUTPUT);
-  pinMode(PIN_LED_Red, OUTPUT);
-  pinMode(PIN_LED_Blue, OUTPUT);
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
+  digitalWrite(pinLED_rojo, LOW);
   
-  digitalWrite(PIN_LED_Blue, HIGH);
-  while (digitalRead(PIN_BUTTON));
-  digitalWrite(PIN_LED_Blue, LOW);
+  //THIS IS ONLY USED FOR DEBUG PURPOSES AND NOT DURING THE MATCH
+  #if ENABLE_TELEMETRY == true
+    // Begin telemetry serial
+    teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+  #else
+    // Begin serial
+    Serial.begin(115200);
+  #endif
 
-  Serial.begin(115200);
-  Serial.println("Start");
-  lidar.begin(lidarSerial);
+  // Begin ESP32 Master-Slave intercommunication serial
+  commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
 
-  rplidar_response_device_info_t info;
-  while (!IS_OK(lidar.getDeviceInfo(info, 100))) {Serial.println(info.model);
-    delay(500);
+  for (int i = 0; i<4; i++) {   //Enviamos la cabecera de inicio de paquete
+    teleSerial.write(0xAA);
   }
-  Serial.println(info.model);
+  teleSerial.write(01);
+  for (int i=0; i<8; i++) {
+      teleSerial.write(1);
+  }
+  teleSerial.write(rtc_get_reset_reason(0));
+  teleSerial.write(rtc_get_reset_reason(1));
+
+  // Set all the pin modes
+  setPinModes();
+  //digitalWrite(pinBuzzer, HIGH);
+
+  // Configure the IMU MPU
+  mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
+  mimpu.Setup();
+  mimpu.WorkOffset();
+
+  delay(500);
+
+  // Begin the lidar and check its health
+  lidar.begin(lidarSerial);
+  rplidar_response_device_info_t info;
+  while (!IS_OK(lidar.getDeviceInfo(info, 100))) delay(500);
   rplidar_response_device_health_t health;
   lidar.getHealth(health);
   Serial.println("info: " + String(health.status) +", " + String(health.error_code));
-  // detected...
-  while (!IS_OK(lidar.startScan())) {delay(500);};
-  Serial.println("Lidar begin");
-  analogWrite(PIN_LIDAR_MOTOR, 255);
-  Serial.println("motor start");
-  
-  delay(500);
-  Serial.println("Creating task");
-  // Asign task 1 to core 0
+  lidar.startScan();
+
+  esp_task_wdt_deinit();
+
+  // Asign LIDAR Task to core 0
   xTaskCreatePinnedToCore(
-    Task1Code,
+    LidarTaskCode,
     "Task1",
-    50000,
+    100000,
     NULL,
-    1,
-    &Task1,
+    10,
+    &LidarTask,
     0);
-    esp_task_wdt_init(5,true);
-    esp_task_wdt_add(NULL);
-  Serial.println("End setup");
+
+  delay(500);
+  //digitalWrite(pinBuzzer, LOW);
+
+  // Start LIDAR's motor rotating at max allowed speed
+  analogWrite(pinLIDAR_motor, 255);
+  delay(500);
+
+  // Wait until y coordinate is calculated
+  while (readDistance(0) < 250) delay(100);
+  setYcoord(readDistance(0));
+  delay(500);
+
+  // Waits until the start button is pressed
+  digitalWrite(pinLED_amarillo, HIGH);
+  while (digitalRead(pinBoton)) {
+    while (commSerial.available())
+    {
+      receiveData();
+    }
+  }
+  prev_encoderMeasurement = encoderMeasurement;
+  digitalWrite(pinLED_amarillo, LOW);
+  delay(1000);
+
+  // Starts driving (set a speed to the car and initialize the IMU MPU)
+  setSpeed(StartSpeed);
+  mimpu.MeasureFirstMicros();
+
+  //-----------------------------------------------------------------------------------------------
+  setSpeed(StartSpeed);
+  estado = e::Inicio;
 }
 
-// put your main code here, to run repeatedly:
+
+
+// ***** LOOP CODE *****
+// This code runs repeatedly
+
 void loop() {
-  esp_task_wdt_reset();
-  // Send data every 5000ms
-  static uint32_t prev_ms = millis() + 5000;
-  if (millis() > prev_ms) {
-    Serial.println("reading");
-    unsigned long ms = millis();
-    float distance = readDistance(0);
-    Serial.println("Distance: " + String(distance) + ",    Millis: " + String(millis() - ms));
-    prev_ms = millis() + 5000;
+
+  // Receive data from the intercommunication serial
+  while (commSerial.available())
+  {
+    receiveData();
+  }
+
+  // Update IMU MPU's angle
+  mimpu.UpdateAngle();
+  //test
+  // Repeat position functions every 32ms
+  static uint32_t prev_ms_position = millis();
+  if (millis() > prev_ms_position) {
+    if (encoderMeasurement != prev_encoderMeasurement) {
+      // Calculate the increment in position and add it
+      int16_t encoderINcrement = encoderMeasurement - prev_encoderMeasurement;
+      double dy = (encoderINcrement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      double dx = (encoderINcrement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      prev_encoderMeasurement = encoderMeasurement;
+      xPosition -= dx; // x -> + right - left
+      yPosition += dy;
+      iteratePositionPID();
+    }
+    prev_ms_position = millis() + 32;
+  }
+
+  // Send telemetry every 100ms, ONLY USED FOR DEBUG PURPOSES AND NOT DURING THE MATCH
+  #if ENABLE_TELEMETRY == true
+  static uint32_t prev_ms_tele = millis();
+  if (millis() > prev_ms_tele + 100)
+  {
+    /*Telemetry format
+    |StartTX             |PacketType |Data|
+      0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
+    */
+    // WE SEND PACKET TYPE 4 DISTANCES
+    /*for (int i = 0; i<4; i++) {
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(04);
+    uint16_t zi=0;
+    while (zi < 360)
+    {
+        teleSerial.write(distances[zi]>>8);
+        teleSerial.write(distances[zi]&0x00ff);
+        zi++;
+    }
+
+    for (int i = 0; i<4; i++) {
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(05);
+    uint16_t wi=0;
+    while (wi < 360)
+    {
+        uint16_t distanceAge =  millis() - distancesMillis[zi];
+        teleSerial.write(distanceAge>>8);
+        teleSerial.write(distanceAge&0x00ff);
+        wi++;
+    }*/
+   
+    // WE SEND PACKET TYPE 3 MEDIUM QUALITY
+    /*
+    for (int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
+      teleSerial.write(0xAA);
+    }
+    teleSerial.write(03);
+    uint16_t pi=0;
+    while (pi < 360){
+        teleSerial.write(distancesArray[1][pi]);
+        pi++;
+    }*/
+
+    // WE SEND PACKET TYPE 5 GENERAL INFORMATION
+                /*
+            -- X Position, 8 bytes
+            -- Y Position, 8 bytes
+            -- X Objective position, 8 bytes
+            -- Y Objective position, 8 bytes
+            -- Encoder, 32 uint32
+            -- State, 8 bits uint
+            -- Battery, 8 bits uint
+            -- Angle, 16 float
+            -- Objective angle, 16 float
+            -- Camera signature 1 detected, 1 byte
+            -- Camera signature 1 x, 8 bits
+            -- Camera signature 1 y, 8 bits
+            -- Camera signature 2 detected, 1 byte
+            -- Camera signature 2 x, 8 bits
+            -- Camera signature 2 y, 8 bits  
+            
+            |XXXX|YYYY|MMMM|NNNN|QQQQ|W|E|RRRR|TTTT|U|I|O|A|S|D
+             0000 0000 0111 1111 1112 2 2 2222 2223 3 3 3 3 3 3
+             1234 5678 9012 3456 7890 1 2 3456 7890 1 2 3 4 5 6
+            */
+    // We send the start header of the packet
+    for (int i = 0; i<4; i++) {
+      teleSerial.write(0xAA);
+    }
+
+    // We send the packet
+    teleSerial.write(byte(06));
+    unsigned long time = millis();
+    long posXLong = long(xPosition);
+    long posYLong = long(yPosition);
+    long posXObjLong = long(objectivePosition);
+    long posYObjLong = (turnSense==-1)?1:(turnSense==1)?2:0;
+    long anguloLong = long(mimpu.GetAngle());
+    long anguloObjLong = long(objectiveDirection);
+    enviarDato((byte*)&time,sizeof(time));
+    enviarDato((byte*)&posXLong,sizeof(posXLong));
+    enviarDato((byte*)&posYLong,sizeof(posYLong));
+    enviarDato((byte*)&posXObjLong,sizeof(posXObjLong));
+    enviarDato((byte*)&posYObjLong,sizeof(posYObjLong));
+    enviarDato((byte*)&encoderMeasurement,sizeof(encoderMeasurement));
+    enviarDato((byte*)&estado,sizeof(estado));
+    enviarDato((byte*)&bateria,sizeof(bateria));
+    enviarDato((byte*)&anguloLong,sizeof(anguloLong));
+    enviarDato((byte*)&anguloObjLong,sizeof(anguloObjLong));
+    enviarDato((byte*)&tramo,sizeof(tramo));
+    //enviarDato(0,1);enviarDato(0,1);
+    enviarDato((byte*)&distancia90,sizeof(distancia90));
+    enviarDato((byte*)&distancia270,sizeof(distancia270));
+    
+    prev_ms_tele = millis();
+  }
+  #endif
+
+  // Check turn every 50ms
+  static uint32_t prev_ms_turn = millis();
+  if (millis() > prev_ms_turn) {
+    checkTurn();
+    prev_ms_turn = millis() + 50;
+  }
+
+  // Repeat direction PID iterations every 20ms
+  // ONLY GOD KNOWS WHAT IS HAPPENING HERE
+  static uint32_t prev_ms_direction = millis();
+  if (millis() > prev_ms_direction) {
+    actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
+    int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
+    if(_setAngle != prev_setAngle) {
+      setSteering(_setAngle*motionDirection);
+      prev_setAngle = _setAngle;
+    }
+    prev_directionError = actual_directionError;
+    prev_ms_direction = millis() + 20;
+  }
+
+  // State machine depending of the position and situation of the robot during the match
+  switch (estado)
+  {
+  case e::Inicio:   // Start position
+    if (yPosition >= 1500) {
+      decideTurn();
+      if (yPosition >= 2400) {
+        setSpeed(0);
+      }
+      if (turnSense != 0) {
+          //digitalWrite(pinLED_rojo, LOW);
+          digitalWrite(pinLED_amarillo, HIGH);
+          //digitalWrite(pinBuzzer, HIGH);
+          //setXcoord(readDistance(270));
+          objectivePosition = xPosition;
+          vTaskDelete(LidarTask);
+          analogWrite(pinLIDAR_motor, 0);
+          estado = e::Recto;
+          setSpeed(CruisiereSpeed);
+        }
+    }
+  break;
+  case e::Recto:
+    if (giros == 12) {
+      estado = e::Final;
+    }
+  break;
+  case e::Final:
+    if (yPosition >= 1200) {
+      setSpeed(0);
+    }
+  break;
+  //Caso prueba para probar el encoder y calcular MMperEncoder
+  case e::Prueba:
+    if (yPosition >= 3000) setSpeed(0);
+  break;
   }
 }
 
-// Create code for task1
-void Task1Code(void * pvParameters) {
+// Definitions
+
+int directionError(int bearing, int target) {
+  int error = target - bearing;
+  return error;
+}
+
+void setSpeed(int speed) {
+  speed = constrain(speed, -100, 100);
+  uint8_t _speed = abs(speed) << 1;
+  if (speed >= 0) {
+    motionDirection = 1;
+  } else {
+    motionDirection = -1;
+    _speed = _speed | 0b01;
+  }
+  commSerial.write(1);
+  commSerial.write(_speed);
+}
+
+void setSteering(int angle) {
+  angle = constrain(angle, -90, 90);
+  uint8_t _angle = angle + 90;
+  commSerial.write(2);
+  commSerial.write(_angle);
+}
+
+// Receive the data from commSerial - the Serial which connects to the ESP32 Slave
+void receiveData() {
+  //Receive the first byte (the header)
+  uint8_t firstByte;
+  commSerial.readBytes(&firstByte, 1);
+  // Header 7 gives the current encoder measurement
+  if (firstByte == 7) {
+    uint8_t bytes[4];
+    commSerial.readBytes(bytes, 4);
+    encoderMeasurement = 0;
+    for (uint8_t iteration; iteration < 4; iteration++) {
+      encoderMeasurement = encoderMeasurement | bytes[iteration] << (8*iteration);
+    }
+  } else
+  // Header 6 gives the current state of the battery (the current voltage level: 1, 2 or 3)
+  if (firstByte == 6) {
+    uint8_t tensionValue;
+    commSerial.readBytes(&tensionValue, 1);
+    bateria = tensionValue;
+    manageTension(tensionValue);
+  }
+}
+
+void manageTension(uint8_t tension) {
+  if (tension == 1) {
+    digitalWrite(pinLED_batAmarillo, LOW);
+    digitalWrite(pinLED_batRojo, LOW);
+    digitalWrite(pinLED_batVerde, HIGH);
+  } else if (tension == 2) {
+    digitalWrite(pinLED_batVerde, LOW);
+    digitalWrite(pinLED_batRojo, LOW);
+    digitalWrite(pinLED_batAmarillo, HIGH);
+  } else if (tension == 3) {
+    digitalWrite(pinLED_batVerde, LOW);
+    digitalWrite(pinLED_batAmarillo, LOW);
+    digitalWrite(pinLED_batRojo, HIGH);
+  }
+}
+
+#define numberOfMeasures 5
+// Angle from 0 to 359
+double readDistance(uint16_t angle) {
+  // return if the storage pointer is not defined to prevent load prohibiteds
+  if (pStorage == nullptr) return -3;
+  // stop the program until we stop writing
+  if (writing) return -2;
+  // create an array of lines to store the output of the RANSAC algorithm
+  Line2D lines[MAX_LANDMARKS];
+  // start reading, execute the RANSAC algorithm, store the output (the number of lines measured) and stop reading
+  reading = true;
+  digitalWrite(pinLED_amarillo, HIGH);
+  int output = exeRANSAC(pStorage, lines, 0);
+  digitalWrite(pinLED_amarillo, LOW);
+  reading = false;
+  // if no lines were measured, the output will be -1. exit the function and return 0
+  if (output == -1) {
+    return -1;
+  }
+ // for each line returned by the RANSAC algorithm, calculate the angle of the line and return the distance to the line with angle within 5 degrees from the requested angle
+  for (uint8_t l = 0; l < output; l++) {
+    Serial.println(180/PI*atan(lines[l].a));
+    if (abs(180/PI*atan(lines[l].a) - angle) < 5) {
+      return DistanceToLine(lines[l], Point2D{0,0});
+    }
+  }
+  // if no line is within the angle desired return 0
+  return 0;
+}
+
+// Create code for the task which manages the lidar
+void LidarTaskCode(void * pvParameters) {
   //Serial.print("Task1 running on core ");
   //Serial.println(xPortGetCoreID());
   // whether the provisional storage is to be loaded to the main storage or not
@@ -125,7 +561,7 @@ void Task1Code(void * pvParameters) {
         // reset the index to start storing the new measurements
         measurementsIndex = 0;
         skipLoad = false;
-        digitalWrite(PIN_LED_Red, LOW);
+        digitalWrite(pinLED_rojo, LOW);
         prev_ms = millis();
       }
       if (loadData) {
@@ -150,37 +586,157 @@ void Task1Code(void * pvParameters) {
       if (measurementsIndex >= 500) {
         measurementsIndex = 0;
         skipLoad = true;
-        digitalWrite(PIN_LED_Red, HIGH);
+        digitalWrite(pinLED_batRojo, HIGH);
       }
     }
   }
 }
 
-// Angle from 0 to 359
-float readDistance(uint16_t angle) {
-  // return if the storage pointer is not defined to prevent load prohibiteds
-  if (pStorage == nullptr) return -3;
-  // stop the program until we stop writing
-  if (writing) return -2;
-  // create an array of lines to store the output of the RANSAC algorithm
-  Line2D lines[MAX_LANDMARKS];
-  // start reading, execute the RANSAC algorithm, store the output (the number of lines measured) and stop reading
-  reading = true;
-  digitalWrite(PIN_LED_Blue, HIGH);
-  int output = exeRANSAC(pStorage, lines, 0);
-  digitalWrite(PIN_LED_Blue, LOW);
-  reading = false;
-  // if no lines were measured, the output will be -1. exit the function and return 0
-  if (output == -1) {
-    return -1;
+void iteratePositionPID() {
+  prev_positionError = positionError;
+  if (fixXposition) {
+    positionError = directionError(xPosition, objectivePosition);
+  } else {
+    positionError = directionError(yPosition, objectivePosition);
   }
- // for each line returned by the RANSAC algorithm, calculate the angle of the line and return the distance to the line with angle within 5 degrees from the requested angle
-  for (uint8_t l = 0; l < output; l++) {
-    Serial.println(180/PI*atan(lines[l].a));
-    if (abs(180/PI*atan(lines[l].a) - angle) < 5) {
-      return DistanceToLine(lines[l], Point2D{0,0});
-    }
+  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -90, 90) * motionDirection;
+  if (fixInverted) objectiveDirection = -objectiveDirection;
+  objectiveDirection += 90 * giros * turnSense;
+}
+
+void turn() {
+  switch ((tramo+1) * turnSense)
+  {
+  case -1:
+    objectivePosition = 2700;
+    fixInverted = false;
+    tramo = 1;
+    break;
+  
+  case -2:
+    objectivePosition = 2700;
+    fixInverted = false;
+    tramo = 2;
+    break;
+
+  case -3:
+    objectivePosition = 300;
+    fixInverted = true;
+    tramo = 3;
+    break;
+
+  case -4:
+    objectivePosition = 300;
+    fixInverted = true;
+    tramo = 0;
+    break;
+  
+  case 1:
+    objectivePosition = 2700;
+    fixInverted = true;
+    tramo = 1;
+    break;
+  
+  case 2:
+    objectivePosition = 400;
+    fixInverted = false;
+    tramo = 2;
+    break;
+
+  case 3:
+    objectivePosition = 400;
+    fixInverted = false;
+    tramo = 3;
+    break;
+
+  case 4:
+    objectivePosition = 2700;
+    fixInverted = true;
+    tramo = 0;
+    break;
   }
-  // if no line is within the angle desired return 0
-  return 0;
+  giros++;
+  fixXposition = !fixXposition;
+}
+
+void setXcoord(uint16_t i) {
+  xPosition = i;
+}
+
+void setYcoord(uint16_t f) {
+  yPosition = mapSize - f - 150;
+}
+
+void checkTurn() {
+  switch ((tramo+1) * turnSense)
+  {
+  case -1:
+    if (yPosition >= 2700 - 200) turn();
+    break;
+  
+  case -2:
+    if (xPosition >= 2700 - 200) turn();
+    break;
+
+  case -3:
+    if (yPosition <= 300 + 200) turn();
+    break;
+
+  case -4:
+    if (xPosition <= 300 + 300) turn();
+    break;
+
+  case 1:
+    if (yPosition >= 2700 - 300) turn();
+    break;
+  
+  case 2:
+    if (xPosition <= 300 + 300) turn();
+    break;
+
+  case 3:
+    if (yPosition <= 300 + 300) turn();
+    break;
+
+  case 4:
+    if (xPosition >= 2700 - 300) turn();
+    break;
+  }
+}
+
+void decideTurn() {
+  distancia90 = readDistance(90);
+  distancia270 = readDistance(270);
+  if (distancia90 > distancia270 && distancia90 > 1000)
+  {
+    turnSense = -1;
+    setXcoord(mapSize - distancia90);
+  }
+  else if (distancia270 > distancia90 && distancia270 > 1000)
+  {
+    turnSense = 1;
+    setXcoord(distancia270);
+  }
+  else turnSense = 0;
+}
+
+void enviarDato(byte* pointer, int8_t size) {
+  int8_t posicion = size - 1;   //recorreremos la memoria desde el de mas valor hara el de menos, ya que el 
+                          //receptor espera ese orde MSB
+  while (posicion >= 0 ) {
+    teleSerial.write(pointer[posicion]);
+    posicion--;
+  }
+}
+
+void sendPacket(byte packetType, byte* packet) {
+  byte size;
+  if (sizeof(packet) == size);
+  for (int i = 0; i<4; i++) {     //Send the start of packet header
+    teleSerial.write(0xAA);
+  }
+  teleSerial.write(packetType);   //Send the packet type
+  for (int i=0; i<size; i++) {    //Send the packet data
+      teleSerial.write(packet[i]);
+  }
 }
