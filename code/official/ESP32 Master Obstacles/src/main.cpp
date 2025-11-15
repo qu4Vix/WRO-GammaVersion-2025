@@ -132,6 +132,7 @@ bool turnClockWise;
 int8_t motionDirection = 0;
 bool isRecognizing = true;
 bool isParking = false;
+bool isMoveCamera = true; //GOD HELP ME
 
 // encoder variables
 
@@ -470,7 +471,7 @@ void loop() {
 
   static uint32_t prev_Cam = millis();
   if (millis() >= prev_Cam) {
-    if (isRecognizing) {
+    if (isMoveCamera) {
       autoMoveCamera();
     }
     prev_Cam = millis() + 100;
@@ -1075,6 +1076,7 @@ void checkTurn() {
     if (yPosition >= 2000) turn();
     if (totalGiros >= 4) {
       isRecognizing = false;
+      isMoveCamera = false;
       moveCamera(0);
     }
     break;
@@ -1125,6 +1127,7 @@ void checkTurn() {
     if (yPosition >= 2000) turn();
     if (totalGiros >= 4) {
       isRecognizing = false;
+      isMoveCamera = false;
       moveCamera(0);
     }
     break;
