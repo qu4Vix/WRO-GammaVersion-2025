@@ -75,3 +75,7 @@ From all the blocks detected, the heighest block is passed to the ESP Master, wh
 ## August 18th & 21st Documentation update
 The repo README was sketched and the licenses were uploaded to the main license file for easier access.
 We uploaded the STL and FreeCAD of the 3D models for the 3D printer, the parts being: steering and support components, wheels, sensor supports and PCB spacers. Included a README describing the folder structure and purpose of the models.
+
+## August 22nd Update after holidays
+Telemetry was moved from official to extras for organisation purposes. The copy of ESP32 Telemetry, Telemetria 2.1 was removed since its changes were not relevant.
+The code for the ESP32 Masters was syncronised, the updated LIDAR code of the Open Challenge was added to the 
