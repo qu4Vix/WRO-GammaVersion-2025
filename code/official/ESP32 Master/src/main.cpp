@@ -84,17 +84,19 @@ uint8_t estado = e::Inicio;
 
 // Journey variables
 uint8_t giros = 0;
-uint8_t tramo = 0;
-int8_t turnSense = 0;       // We don't know it at the beginning
+uint8_t tramo = 0; //empezamos en 1, ...
+int8_t turnSense = 0;       // We don't know it at the beginning, 0->we don't know, 1->anti, -1->clockwise
 int8_t motionDirection = 0; // The car doesn't move at the beginning
 
 // Encoder variables
 u_int32_t encoderMeasurement;
 u_int32_t prev_encoderMeasurement;
 
+double prev_angleMagico;
+
 // Lidar measurement variables
 uint16_t distances[360];
-static uint16_t distancesMillis[360];
+static uint32_t distancesMillis[360];
 
 // Car position on the map (origin at the bottom-left corner)
 double xPosition = 0;   // x position of the car (increases to the right)
@@ -239,6 +241,7 @@ void setup() {
     }
   }
   prev_encoderMeasurement = encoderMeasurement;
+  prev_angleMagico = mimpu.GetAngle();
   digitalWrite(pinLED_amarillo, LOW);
   #endif
   delay(1000);
@@ -273,10 +276,23 @@ void loop() {
   if (millis() > prev_ms_position) {
     if (encoderMeasurement != prev_encoderMeasurement) {
       // Calculate the increment in position and add it
-      int16_t encoderINcrement = encoderMeasurement - prev_encoderMeasurement;
-      double dy = (encoderINcrement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
-      double dx = (encoderINcrement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      double angulomagico = mimpu.GetAngle();
+      int32_t incrementoMagico = encoderMeasurement - prev_encoderMeasurement;
+      double da = (angulomagico - prev_angleMagico) / incrementoMagico;
+
+      /*double dy = (encoderINcrement) * cos(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;
+      double dx = (encoderINcrement) * sin(mimpu.GetAngle() * (M_PI/180)) * MMperEncoder;*/
+
+      double dy = 0;
+      double dx = 0;
+      for (int i = 1; i <= abs(incrementoMagico); i++)
+      {
+        dy = dy + motionDirection * cos((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
+        dx = dx + motionDirection * sin((prev_angleMagico + da*i) * (M_PI/180)) * MMperEncoder;
+      }
+
       prev_encoderMeasurement = encoderMeasurement;
+      prev_angleMagico = mimpu.GetAngle();
       xPosition -= dx; // x -> + right - left
       yPosition += dy;
       iteratePositionPID();
@@ -547,7 +563,7 @@ uint16_t readDistance(uint16_t angle) {
 
   int index2 = -numberOfMeasures;
   uint16_t f_distances[360];
-  uint16_t f_distancesMillis[360];
+  uint32_t f_distancesMillis[360];
   
   
   for (int i = 0; i < 360; i++) {
