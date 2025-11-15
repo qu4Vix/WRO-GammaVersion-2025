@@ -12,7 +12,7 @@
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
-#define ENABLE_TELEMETRY true
+#define ENABLE_TELEMETRY false
 
 /*#if ENABLE_WIFI == true
 #include <OTAUpdate.h>
@@ -319,8 +319,8 @@ void setup() {
   teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
   #else
   // begin serial
-  teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
-  //Serial.begin(115200);
+  //teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
+  Serial.begin(1000000);
   #endif
   // begin esp32 intercommunication serial
   commSerial.begin(1000000, SERIAL_8N1, pinRX, pinTX);
@@ -1503,12 +1503,12 @@ void updatePosition() {
   lidarEnabled = true;
   //pitiditos(3);
 
-  //temptime = millis() + 2000;
-  /*while (millis() < temptime)
+  uint32_t temptime = millis() + 1500;
+  while (millis() < temptime)
   {
-
+    mimpu.UpdateAngle();
   }
-  */
+  
 
   if (turnClockWise)
   {
@@ -1520,24 +1520,28 @@ void updatePosition() {
     uint32_t tmax = millis() + 8000;
     bool diditfail = false;
 
-    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 200){
-      mimpu.GetAngle();
+    ytemp = readDistance(180);
+    while ((ytemp < 10) || (abs((ytemp - yPosition)) > 200)){
+      mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
         break;
       }
+      ytemp = readDistance(180);
     } 
     tmax = millis() + 8000;
-    while( (xtemp = readDistance(270)) < 10 || abs((xtemp + lidarToImu - xPosition)) > 200){
-      mimpu.GetAngle();
+    xtemp = readDistance(270);
+    while( (xtemp < 10) || (abs((xtemp + lidarToImu - xPosition)) > 200)){
+      mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
         break;
-      }      
+      }   
+      xtemp = readDistance(270);   
     }
     if(!diditfail){
       setXcoord(xtemp + lidarToImu);
@@ -1553,24 +1557,28 @@ void updatePosition() {
     uint32_t tmax = millis() + 8000;
     bool diditfail = false;
 
-    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 200){
-      mimpu.GetAngle();
+    ytemp = readDistance(180);
+    while ( (ytemp < 10) || (abs((ytemp - yPosition)) > 200)){
+      mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
         break;
       }
+      ytemp = readDistance(180);
     } 
     tmax = millis() + 8000;
-    while( (xtemp = readDistance(90)) < 10 || abs((3000 - xtemp - lidarToImu - xPosition)) > 200){
-      mimpu.GetAngle();
+    xtemp = readDistance(90);
+    while( (xtemp < 10) || (abs((3000 - xtemp - lidarToImu - xPosition)) > 200)){
+      mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
         diditfail = true;
         break;
-      }      
+      }
+      xtemp = readDistance(90);      
     }
     if(!diditfail){
       setXcoord(3000 - xtemp - lidarToImu);

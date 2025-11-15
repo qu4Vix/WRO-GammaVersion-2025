@@ -34,7 +34,8 @@ void MPU::BeginWire(byte pinSDA, byte pinSCL, uint32_t freq) {
 void MPU::Setup() {
     MPU9250Setting setting;
     setting.accel_fs_sel = ACCEL_FS_SEL::A16G;
-    setting.gyro_fs_sel = GYRO_FS_SEL::G2000DPS;
+    setting.gyro_fs_sel = GYRO_FS_SEL::G500DPS;
+    //setting.gyro_fs_sel = GYRO_FS_SEL::G2000DPS;
     setting.mag_output_bits = MAG_OUTPUT_BITS::M16BITS;
     setting.fifo_sample_rate = FIFO_SAMPLE_RATE::SMPL_200HZ;
     setting.gyro_fchoice = 0x03;
@@ -63,7 +64,7 @@ void MPU::WorkOffset() {
         //delay(5);
     }
     _offset = tot / num; //1000;//((micros() - offset_time) / double(1000000));
-    Serial.println("Offset = " + String(_offset));
+    Serial.println("Offset = " + String(_offset*1000000));
 }
 
 /*void MPU::UpdateAngle() {
