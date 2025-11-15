@@ -89,7 +89,8 @@ enum e {
   Aparcar4,
   Esperar,
   Prueba,
-  Aparcar5
+  Aparcar5,
+  Aparcar6
 };
 uint8_t estado = e::Arrancar;
 
@@ -148,6 +149,12 @@ static uint32_t distancesMillis[360];
 uint16_t distancia0;
 uint16_t distancia90;
 uint16_t distancia270;
+
+//Constrain variable de la posición, para que se abra un poco...
+#define constrainNormal 90
+#define constrainAbrir 102
+
+int ConstrainVariable = constrainNormal;
 
 // car position on the map (origin at the bottom-left corner)
 
@@ -333,7 +340,7 @@ void setup() {
   // configure the mpu
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
-  delay(3000);
+  delay(20000);
   mimpu.WorkOffset();
   //pitiditos(2);
   // begin the lidar
@@ -621,6 +628,8 @@ void loop() {
   break;
   case e::Final:  // we probably want to be redirected to here after we finish the parking manouver ---------------------------------------------
     setSteering(0);
+    analogWrite(pinLIDAR_motor, 0);
+
     if (yPosition >= 1200) {
       setSpeed(0);
     }
@@ -696,7 +705,7 @@ void loop() {
   */
   
   case e::Aparcar1:
-    if (yPosition >= 1370 + 530 - 530*turnClockWise)
+    if (yPosition >= 1410 + 530 - 530*turnClockWise)
     {
       setSpeed(0);
       pidEnabled = false;
@@ -725,14 +734,8 @@ void loop() {
 
   case e::Aparcar4:
     if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 5) {
-      if ((mimpu.GetAngle()*turnSense - 90*totalGiros) < 3){
-        setSpeed(StartSpeed);
-      estado = e::Aparcar5;
-      }
-      else{
-        setSpeed(0);
-        estado = e::Final;
-      }
+      setSpeed(0);
+      estadoEsperar(e::Aparcar5, 1000);
     }
   break;
 
@@ -743,10 +746,21 @@ void loop() {
   break;
 
   case e::Aparcar5:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 3){
-      setSpeed(0);
-      estado = e::Final;
-    }
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) < -3){
+        setSpeed(StartSpeed);
+      estado = e::Aparcar6;
+      }
+      else{
+        setSpeed(0);
+        estado = e::Final;
+      }
+  break;
+
+  case e::Aparcar6:
+      if ((mimpu.GetAngle()*turnSense - 90*totalGiros) > -3){
+        setSpeed(0);
+        estado = e::Final;
+      }
   break;
   }
 }
@@ -979,7 +993,7 @@ void iteratePositionPID() {
   } else {
     positionError = directionError(yPosition, objectivePosition);
   }
-  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -90, 90) * motionDirection;
+  objectiveDirection = constrain(positionKP * positionError + positionKD * (positionError - prev_positionError), -ConstrainVariable, ConstrainVariable) * motionDirection;
   if (fixInverted) objectiveDirection = -objectiveDirection;
   objectiveDirection += 90 * giros * turnSense;
 }
@@ -989,6 +1003,7 @@ void turn() {
   switch ((tramo+1) * turnSense)
   {
   case -2:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][1][arrayBloques[2]];
     fixInverted = false;
     fixXposition = false;
@@ -996,6 +1011,7 @@ void turn() {
     break;
   
   case -4:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][2][arrayBloques[4]];
     fixInverted = false;
     fixXposition = true;
@@ -1003,6 +1019,7 @@ void turn() {
     break;
 
   case -6:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][3][arrayBloques[6]];
     fixInverted = true;
     fixXposition = false;
@@ -1010,6 +1027,7 @@ void turn() {
     break;
 
   case -8:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][0][arrayBloques[0]];
     fixInverted = true;
     fixXposition = true;
@@ -1018,6 +1036,7 @@ void turn() {
     break;
   
   case 2:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][1][arrayBloques[2]];
     fixInverted = true;
     fixXposition = false;
@@ -1025,6 +1044,7 @@ void turn() {
     break;
   
   case 4:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][2][arrayBloques[4]];
     fixInverted = false;
     fixXposition = true;
@@ -1032,6 +1052,7 @@ void turn() {
     break;
 
   case 6:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][3][arrayBloques[6]];
     fixInverted = false;
     fixXposition = false;
@@ -1039,6 +1060,7 @@ void turn() {
     break;
 
   case 8:
+    ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][0][arrayBloques[0]];
     fixInverted = true;
     fixXposition = true;
@@ -1189,6 +1211,7 @@ void decideTurn(){
 }
 
 void changeLane(uint8_t _tramo) {
+  ConstrainVariable = constrainNormal;
   objectivePosition = blockPaths[turnClockWise][uint8_t(_tramo/2)][arrayBloques[_tramo]];
   enableCamera();
   tramo++;
@@ -1556,7 +1579,7 @@ void updatePosition() {
     
 
   }
-  delay(500);
+  //delay(500);
   lidarEnabled = false;
   //analogWrite(pinLIDAR_motor, 0);
   //teleEnviar();
