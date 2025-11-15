@@ -143,6 +143,7 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBu
     for (uint16_t i = 0; i < storage->getSize(); i++) {
         unassocPoints.append(i);
     }
+    printf("Data buffer size: %u", unassocPoints.size());
     // Setup the random device
 #if Native == true
     std::random_device rd;
@@ -162,7 +163,7 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBu
         double centreAngle = storage->getMeasurement(unassocPoints[centrePoint]).bearing;
         uint16_t sampleBuffer[SAMPLE_SIZE];
         sampleBuffer[0] = centrePoint;
-        //printf("Centre %u  ", centrePoint);
+        printf("Centre %u  ", centrePoint);
         uint8_t sampledPoints = 1;
         std::uniform_int_distribution<> sampleDist(centrePoint - DEGREE_RANGE*DEGREES_PER_MEASUREMENT, centrePoint + DEGREE_RANGE*DEGREES_PER_MEASUREMENT);
         // Generate the random sample
@@ -178,24 +179,24 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBu
             {
                 if (sampleBuffer[i] == index) {
                     isNew = false;
-                    //printf("Repeated %u  ", unassocPoints[index]);
+                    printf("Repeated %u  ", unassocPoints[index]);
                     break;
                 }
             }
             if (isNew) {
-                if (abs(storage->getMeasurement(unassocPoints[index]).bearing - centreAngle) < DEGREE_RANGE) { // what if angle 1 is 359º and angle 2 is 1º, the angular distance should be 2º
+                if (abs(storage->getMeasurement(unassocPoints[index]).bearing - centreAngle) < DEGREE_RANGE) { // what if angle 1 is 359º and angle 2 is 1º, the angular distance should be 2º. bearing is set so that the discontinuity is at 180º, an angle that is never measured since the electronics of the car are in the way
                     // accept point
                     sampleBuffer[sampledPoints] = index;
                     sampledPoints++;
-                    //printf("Sampled %u  ", unassocPoints[index]);
-                } //else printf("Failed %u  ", unassocPoints[index]);
+                    printf("Sampled %u  ", unassocPoints[index]);
+                } else printf("Failed %u  ", unassocPoints[index]);
             }
             sampleTrials++;
         }
-        //printf("\n");
+        printf("\n");
         // If too few points were sampled, continue to the next iterarion
         if (sampledPoints < MIN_SAMPLE) {
-            //printf("Skipped %u  \n\n", sampledPoints);
+            printf("Skipped %u  \n\n", sampledPoints);
             continue;
         }
         // Calculate the best fit line for this sample
@@ -207,22 +208,22 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBu
             if (SquareDistanceToLine(bestFitLine, dataBuffer[unassocPoints[j]]) < DISTANCE_TOLERANCE*DISTANCE_TOLERANCE) {
                 pointsLiying[totalPointsLiying] = j;    // When we pass this to CalcBestFitLineFromSample, it expects indices of dataBuffer- i.e. from the List unassocPoints-, not indices of the list. On the other hand, to pop the points we better know the indices of the list.
                 totalPointsLiying++;
-                //printf("Lying: %u  ", j);
+                printf("Lying: %u  ", j);
             }
         }
-        //printf("Points Lying: %u  \n", totalPointsLiying);
+        printf("Points Lying: %u  \n", totalPointsLiying);
         if (totalPointsLiying > CONCENSUS) {
             Line2D extractedLine = CalcBestFitLineFromSample(dataBuffer, unassocPoints, pointsLiying, totalPointsLiying);
             outputBuffer[linesExtracted] = extractedLine;
             linesExtracted++;
             for (uint16_t p = 0; p < totalPointsLiying; p++) {
-                //printf("Popped: %u  ", pointsLiying[p]);
+                printf("Popped: %u  ", pointsLiying[p]);
                 unassocPoints.pop(pointsLiying[p] - p); // When a point is popped, all indices after are shifted left, so they have to be substracted the amount of pops to compensate
             }
-            //printf("\n\n");
+            printf("\n\n");
             // If there are less unassociated points left than the concensus, we will be unable to read any more lines, so break the loop 
             if (unassocPoints.size() < CONCENSUS) {
-                //printf("Breaking \n\n");
+                printf("Breaking \n\n");
                 if (unassocBuffer) {
                     for (uint8_t unPt = 0; unPt < unassocPoints.size(); unPt++) {
                         unassocBuffer[unPt] = dataBuffer[unassocPoints[unPt]];
@@ -232,7 +233,7 @@ int exeRANSAC(lidarStorage * storage, Line2D * outputBuffer, Point2D * unassocBu
             }
         }
     }
-    //printf("UnassocPoints: %u  \n", unassocPoints.size());
+    printf("UnassocPoints: %u  \n", unassocPoints.size());
     // If we have exctracted any lines, return the number of them
     if (linesExtracted) {
         return linesExtracted;
