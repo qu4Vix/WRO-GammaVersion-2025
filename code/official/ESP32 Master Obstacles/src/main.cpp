@@ -140,7 +140,7 @@ int32_t prev_encoderMeasurement;
 // lidar measurement variables
 
 uint16_t distances[360];
-static uint16_t distancesMillis[360];
+static uint32_t distancesMillis[360];
 uint16_t distancia0;
 uint16_t distancia90;
 uint16_t distancia270;
@@ -276,6 +276,7 @@ void moveCamera(int8_t angle);
 void autoMoveCamera();
 void enableCamera();
 void updatePosition();
+void updatePositionMagicaPrimeraVuelta();
 
 void saveParkingPosition();
 
@@ -292,7 +293,7 @@ void pitiditos(int num){
 }
 
 void estadoEsperar(byte estadoObjetivo, uint16_t delay) {
-  pitiditos(1);
+  //pitiditos(1);
   marcaMillis = millis() + delay;
   marcaEstado = estadoObjetivo;
   estado = e::Esperar;
@@ -301,7 +302,7 @@ void estadoEsperar(byte estadoObjetivo, uint16_t delay) {
 void setup() {
   // put your setup code here, to run once:
   setPinModes();
-  pitiditos(1);
+  //pitiditos(1);
   #if ENABLE_TELEMETRY == true
   // begin telemetry serial
   teleSerial.begin(1000000, SERIAL_8N1, telemetriaRX, telemetriaTX);
@@ -329,7 +330,7 @@ void setup() {
   mimpu.BeginWire(pinMPU_SDA, pinMPU_SCL, 400000);
   mimpu.Setup();
   mimpu.WorkOffset();
-  pitiditos(2);
+  //pitiditos(2);
   // begin the lidar
   lidar.begin(lidarSerial);
   rplidar_response_device_info_t info;
@@ -339,7 +340,7 @@ void setup() {
   //Serial.println("info: " + String(health.status) +", " + String(health.error_code));
   // detected...
   lidar.startScan();
-  pitiditos(3);
+  //pitiditos(3);
   //esp_task_wdt_deinit();
   // Asign lidar Task to core 0
   xTaskCreatePinnedToCore(
@@ -359,7 +360,7 @@ void setup() {
     &TaskIMU,
     0);*/
   delay(500);
-  pitiditos(4);
+  //pitiditos(4);
   // start lidar's motor rotating at max allowed speed
   analogWrite(pinLIDAR_motor, 255);
   delay(500);
@@ -611,7 +612,7 @@ void loop() {
   break;
   case e::Reposicionar:
     distancia0 = readDistance(0);
-    if (distancia0)
+    if (distancia0 > 0)
     {
       setYcoord(distancia0);
       saveParkingPosition();
@@ -819,13 +820,16 @@ uint16_t readDistance(uint16_t angle) {
 
   int index2 = -numberOfMeasures;
   uint16_t f_distances[360];
-  uint16_t f_distancesMillis[360];
+  uint32_t f_distancesMillis[360];
   
   // copy the distances array to avoid writing what is being read
-  for (int i = 0; i < 360; i++) {
+  /*for (int i = 0; i < 360; i++) {
     f_distances[i] = distances[i];
     f_distancesMillis[i] = distancesMillis[i];
-  }
+  }*/
+  //Comented the for to use another system that is more efficient
+  memcpy(f_distances,distances,sizeof(distances));
+  memcpy(f_distancesMillis,distancesMillis,sizeof(distancesMillis));
 
   while (index < numberOfMeasures) {
     // work out the resultant index for the distances array
@@ -848,7 +852,7 @@ uint16_t readDistance(uint16_t angle) {
     }
   }
   // if the search fails return 0
-  return 2;
+  return 0;
 }
 
 // Create code for the task which manages the lidar
@@ -1045,7 +1049,10 @@ void checkTurn() {
 
   case -4:
     if ((xPosition <= 1600) && (setCoordTramo(3, 2800, 2200))) correctLane(3);
-    if (xPosition >= 2000) turn();
+    if (xPosition >= 2000) {
+      //updatePositionMagicaPrimeraVuelta();
+      turn();
+    }
     break;
 
   case -5:
@@ -1092,7 +1099,10 @@ void checkTurn() {
 
   case 4:
     if ((xPosition >= 1400) && (setCoordTramo(3, 2200, 2800))) correctLane(3);
-    if (xPosition <= 1000) turn();
+    if (xPosition <= 1000){
+      //updatePositionMagicaPrimeraVuelta();
+      turn();
+    }
     break;
   
   case 5:
@@ -1411,6 +1421,14 @@ void saveParkingPosition() {
 
 void updatePosition() {
   setSpeed(0);
+
+  uint32_t temptime = millis() + 2000;
+  while (millis() < temptime)
+  {
+
+  }
+
+
   //teleEnviar();
   //analogWrite(pinLIDAR_motor, 255);
 
@@ -1419,6 +1437,88 @@ void updatePosition() {
     distancesMillis[i] = 0;
   }
 
+  lidarEnabled = true;
+  //pitiditos(3);
+
+  temptime = millis() + 2000;
+  while (millis() < temptime)
+  {
+
+  }
+
+  if (turnClockWise)
+  {
+    //yPosition=readDistance(180);
+    //setXcoord(readDistance(270) + lidarToImu);
+    // *** Se modifica para no aceptar medidas inferiores a 10
+    uint16_t xtemp = 0;
+    uint16_t ytemp = 0;
+    uint32_t tmax = millis() + 8000;
+    bool diditfail = false;
+
+    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }
+    } 
+    tmax = millis() + 8000;
+    while( (xtemp = readDistance(270)) < 10 || abs((xtemp + lidarToImu - xPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }      
+    }
+    if(!diditfail){
+      setXcoord(xtemp + lidarToImu);
+      yPosition = ytemp;
+    }
+  }
+  else{
+    //yPosition=readDistance(180);
+    //setXcoord(3000 - readDistance(90) - lidarToImu);
+    // *** Se modifica para no aceptar medidas inferiores a 10
+    uint16_t xtemp = 0;
+    uint16_t ytemp = 0;
+    uint32_t tmax = millis() + 8000;
+    bool diditfail = false;
+
+    while ( (ytemp = readDistance(180)) < 10 || abs((ytemp - yPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }
+    } 
+    tmax = millis() + 8000;
+    while( (xtemp = readDistance(90)) < 10 || abs((3000 - xtemp - lidarToImu - xPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }      
+    }
+    if(!diditfail){
+      setXcoord(3000 - xtemp - lidarToImu);
+      yPosition = ytemp;
+    }
+    
+
+  }
+  delay(500);
+  lidarEnabled = false;
+  //analogWrite(pinLIDAR_motor, 0);
+  //teleEnviar();
+  setSpeed(CruisiereSpeed);
+
+
+  /*
   //lidarEnabled = true;
   delay(500);
   if (turnClockWise)
@@ -1434,7 +1534,7 @@ void updatePosition() {
   //lidarEnabled = false;
   //analogWrite(pinLIDAR_motor, 0);
   //teleEnviar();
-  setSpeed(NormalSpeed);
+  setSpeed(NormalSpeed);*/
 }
 
 void teleEnviar(){
@@ -1510,4 +1610,104 @@ void teleEnviar(){
     teleSerial.write(byte(01));
     enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
     teleSerial.write(0x00);teleSerial.write(0x00);
+}
+
+
+void updatePositionMagicaPrimeraVuelta() {
+  setSpeed(0);
+
+  uint32_t temptime = millis() + 2000;
+  while (millis() < temptime)
+  {
+
+  }
+
+
+  //teleEnviar();
+  //analogWrite(pinLIDAR_motor, 255);
+
+  for (int i = 0; i < 360; i++) {
+    distances[i] = 0;
+    distancesMillis[i] = 0;
+  }
+
+  lidarEnabled = true;
+  //pitiditos(3);
+
+  temptime = millis() + 2000;
+  while (millis() < temptime)
+  {
+
+  }
+
+  if (turnClockWise)
+  {
+    //yPosition=readDistance(180);
+    //setXcoord(readDistance(270) + lidarToImu);
+    // *** Se modifica para no aceptar medidas inferiores a 10
+    uint16_t xtemp = 0;
+    uint16_t ytemp = 0;
+    uint32_t tmax = millis() + 8000;
+    bool diditfail = false;
+
+    while ( (ytemp = readDistance(0)) < 10 || abs((3000 - ytemp - yPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }
+    } 
+    tmax = millis() + 8000;
+    while( (xtemp = readDistance(90)) < 10 || abs((3000 -xtemp - lidarToImu - xPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }      
+    }
+    if(!diditfail){
+      setXcoord(3000 -xtemp - lidarToImu);
+      yPosition = 3000 - ytemp;
+    }
+  }
+  else{
+    //yPosition=readDistance(180);
+    //setXcoord(3000 - readDistance(90) - lidarToImu);
+    // *** Se modifica para no aceptar medidas inferiores a 10
+    uint16_t xtemp = 0;
+    uint16_t ytemp = 0;
+    uint32_t tmax = millis() + 8000;
+    bool diditfail = false;
+
+    while ( (ytemp = readDistance(0)) < 10 || abs((3000-ytemp - yPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }
+    } 
+    tmax = millis() + 8000;
+    while( (xtemp = readDistance(270)) < 10 || abs((xtemp + lidarToImu - xPosition)) > 100){
+      delay(100);
+      if (millis() > tmax){
+        //pitiditos(10);
+        diditfail = true;
+        break;
+      }      
+    }
+    if(!diditfail){
+      setXcoord(xtemp + lidarToImu);
+      yPosition = 3000-ytemp;
+    }
+    
+
+  }
+  delay(500);
+  lidarEnabled = false;
+  //analogWrite(pinLIDAR_motor, 0);
+  //teleEnviar();
+  setSpeed(CruisiereSpeed);
 }
