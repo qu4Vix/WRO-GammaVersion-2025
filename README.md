@@ -220,21 +220,23 @@ Due to the limited vision of our camera, the robot rotates the camera with a ser
 ## PHOTOS
 
 ### Car images
+
 | | |
 | ------------------------- | ------------------------- |
-| ![front](./photos/vehicle-photos/Front.jpg)  | ![back](./photos/vehicle-photos/Back.jpg) |
-| ![right](./photos/vehicle-photos/Right%20Side.jpg) | ![left](./photos/vehicle-photos/Left%20Side.jpg) |
-| ![top](./photos/vehicle-photos/Top.jpg) | ![bottom](./photos/vehicle-photos/Bottom.jpg) |
+| <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/vehicle-photos/Back.jpg?raw=true" width="500">  | <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/vehicle-photos/Front.jpg?raw=true" width="500"> |
+| <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/vehicle-photos/Left%20Side.jpg?raw=true" width="500"> | <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/vehicle-photos/Right%20Side.jpg?raw=true" width="500"> |
+| <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/vehicle-photos/Top.jpg?raw=true" width="500"> | <img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/vehicle-photos/Bottom.jpg?raw=true" width="500"> |
+
 ### Team images
 
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Funny%20Image.jpg?raw=true" width="700">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Funny%20Image.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%201.jpg?raw=true" width="700">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%201.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true" width="700">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpeg?raw=true" width="700">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpeg?raw=true" width="800">
 
 ## DEMONSTRATION VIDEOS
 
@@ -242,6 +244,8 @@ Demonstration videos of the car successfully completing both challenges. The lin
 
 * [Open Challenge](https://youtu.be/jVDG6yYy9Xo)
 * [Obstacle Challenge](https://youtu.be/SR2mRw_vzmI)
+
+MORE VIDEOS IN OUR [YOUTUBE CHANNEL](https://www.youtube.com/@gammaversion)
 
 ## LICENSE
 

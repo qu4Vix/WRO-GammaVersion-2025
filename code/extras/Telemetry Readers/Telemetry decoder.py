@@ -1,6 +1,6 @@
 import socket
 
-LOCAL_UDP_IP = "192.168.1.160"
+LOCAL_UDP_IP = "192.168.144.4"
 SHARED_UDP_PORT = 5007
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet  # UDP
 sock.bind((LOCAL_UDP_IP, SHARED_UDP_PORT))
@@ -136,13 +136,13 @@ def parse_packet(receivedBytes):
                 'PosicionYObjetivo': PosicionYObjetivo,
                 'Encoder': Encoder-8192,
                 'Estado': Estado,
-                #'Bateria': Bateria,
-               # 'Angulo': angulo,
-               # 'AnguloObjetivo': anguloObjetivo,
+                'Bateria': Bateria,
+                'Angulo': angulo,
+                'AnguloObjetivo': anguloObjetivo,
                 'Tramo': tramo,
-               # 'Distancia0' : distancia0,
-               #'Distancia90':distancia90,
-                #'Distancia270':distancia270,
+                'Distancia0' : distancia0,
+               'Distancia90':distancia90,
+                'Distancia270':distancia270,
             }
         elif cabecera == 7:
             #print("Cabecera 7: Camera ------------------")
