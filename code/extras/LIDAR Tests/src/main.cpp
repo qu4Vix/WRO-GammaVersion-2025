@@ -113,8 +113,8 @@ void Task1Code(void * pvParameters) {
       bool startBit = lidar.getCurrentPoint().startBit; //whether this point is belong to a new scan
       // if the point belongs to a new scan store the current buffer to the provisional storage
       if (startBit) {
-        Serial.println("StartBit");
-        Serial.printf("Storage size: %u\n", measurementsIndex);
+        //Serial.println("StartBit");
+        //Serial.printf("Storage size: %u\n", measurementsIndex);
         Serial.printf("Loop time: %u\n", millis()-prev_ms);
         if (measurementsIndex > 6 && !skipLoad) {
           provisionalStorage = new lidarStorage(measurementsIndex);
@@ -143,7 +143,7 @@ void Task1Code(void * pvParameters) {
           loadData = false;
         }
       }
-      Serial.printf("measurement: %u\n", measurementsIndex);
+      //Serial.printf("measurement: %u\n", measurementsIndex);
       // store the new measurement in the buffer (range and bearing, the angle between 180 and -180 for easy substractions)
       lidarBuffer[measurementsIndex] = polarPoint2D{distance, (angle > 180)?(angle - 360):angle};
       measurementsIndex++;
