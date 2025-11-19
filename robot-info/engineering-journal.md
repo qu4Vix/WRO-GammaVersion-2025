@@ -77,5 +77,11 @@ The repo README was sketched and the licenses were uploaded to the main license 
 We uploaded the STL and FreeCAD of the 3D models for the 3D printer, the parts being: steering and support components, wheels, sensor supports and PCB spacers. Included a README describing the folder structure and purpose of the models.
 
 ## August 22nd Update after holidays
+Today's changes were mostly to get everything prepared before continuing to make changes. Changes were put up to date and some things were reorganised.
 Telemetry was moved from official to extras for organisation purposes. The copy of ESP32 Telemetry, Telemetria 2.1 was removed since its changes were not relevant.
-The code for the ESP32 Masters was syncronised, the updated LIDAR code of the Open Challenge was added to the 
+The code for the ESP32 Masters was syncronised. The updated LIDAR code of the Open Challenge was added to the Obstacle Challenge. The 2nd rounds speed system - based on defines for easier configuration - was implemented in the 1st round.
+Innecesary states were removed; added track constants and the ENABLE_TELEMETRY define was added to the Open Challenge; practice mode was added to the phase 2 code.
+Telemetry was unified, distance90 and distance270 were added to phase 2.
+Finally, an problem with the transition from state e::Inicio to e::Recto, in which if the turnSense was decided too soon, e::Recto would never be reached.
+
+## August 24th 

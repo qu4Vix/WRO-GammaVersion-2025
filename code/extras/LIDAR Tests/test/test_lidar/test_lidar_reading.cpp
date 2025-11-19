@@ -1,6 +1,3 @@
-// Copy of test_lidar_reading.cpp
-
-
 #include <Arduino.h>
 #include <RPLidar.h>
 #include <esp_task_wdt.h> 
