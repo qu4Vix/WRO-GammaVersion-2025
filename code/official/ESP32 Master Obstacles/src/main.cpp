@@ -204,40 +204,48 @@ bool lidarEnabled = true;
 
 // trajectory management variables
 
+// not used
 uint16_t tramos[2][8] = {
   {500,500,2500,2500,2500,2500,500,500},
   {mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, trackCenter, trackCenter, trackCenter, trackCenter}
 };
 
+// array to save the blocks detected. the odd indices save the first block of a section while the even save the second or third
 uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+// 
 const uint16_t blockPaths[2][4][3] =
 {
   { // anticlockwise
-    {2500, mapSize - trackCenter - trackLateral, mapSize - 380}, //Center, left, right
-    {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral},
-    {500, trackCenter + trackLateral, trackCenter - trackLateral},
-    {500, trackCenter + trackLateral, trackCenter - trackLateral}
+    //Center, left, right
+    {2500, mapSize - trackCenter - trackLateral, mapSize - 380}, // first lane
+    {2500, mapSize - trackCenter - trackLateral, mapSize - trackCenter + trackLateral}, // second lane
+    {500, trackCenter + trackLateral, trackCenter - trackLateral}, // third lane
+    {500, trackCenter + trackLateral, trackCenter - trackLateral} // fourth lane
   },
   { // clockwise
-    {500, 380, trackCenter + trackLateral},
-    {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // Center, left, right
-    {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral},
-    {500, trackCenter - trackLateral, trackCenter + trackLateral}
+    // Center, left, right
+    {500, 380, trackCenter + trackLateral}, // first lane
+    {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // second lane
+    {2500, mapSize - trackCenter + trackLateral, mapSize - trackCenter - trackLateral}, // third lane
+    {500, trackCenter - trackLateral, trackCenter + trackLateral} // fourth lane
   }
 };
+
 const uint16_t blockPositions[2][4][3] = 
 {
   { // Anticlockwise
-    {950, 1400, 1900}, // First, second, third block
-    {2100, 1600, 1050},
-    {2100, 1600, 1050},
-    {950, 1400, 1900}
+    // First, second, third block
+    {950, 1400, 1900}, // first lane
+    {2100, 1600, 1050}, // second lane
+    {2100, 1600, 1050}, // third lane
+    {950, 1400, 1900} // fourth lane
   },
   { // Clockwise
-    {950, 1400, 1900},
-    {950, 1400, 1900}, // First, second, third block
-    {2100, 1600, 1050},
-    {2100, 1600, 1050}
+    // First, second, third block
+    {950, 1400, 1900}, // first lane
+    {950, 1400, 1900}, // second lane
+    {2100, 1600, 1050}, // third lane
+    {2100, 1600, 1050} // fourth lane
   }
 };
 uint8_t lastBlock;
@@ -1105,6 +1113,7 @@ void setYcoord(uint16_t f) {
 }
 
 void checkTurn() {
+  // add one to tramo so that every tramo can have a sign which will depend on the sense of turn
   switch ((tramo+1) * turnSense)
   {
   case 0:
@@ -1113,7 +1122,9 @@ void checkTurn() {
     }
     break;
   case -1:
+    // if there is a block detected correct the lane, i.e. move to the new lane
     if (setCoordTramo(0, 200, 800)) correctLane(0);
+    // move to the next tramo
     if (yPosition >= 1000) changeLane(1);
     break;
   
