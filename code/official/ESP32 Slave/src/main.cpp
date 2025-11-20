@@ -165,7 +165,7 @@ void loop() {
   if (millis() > prev_ms_encoder) {
     //prev_encoderMeasurement = encoderMeasurement;
     sendEncoder(miencoder.GetEncoder());
-    prev_ms_encoder = millis() + 32;
+    prev_ms_encoder = millis() + 16;
   }
 
   // Sends the position and type of the nearest block detected by the camera

@@ -1,3 +1,10 @@
+// TO DO
+// Poner el no abrir angulo al clockwise
+
+
+
+
+
 #include <Arduino.h>
 #include <AdvancedMPU.h>
 #include <RPLidar.h>
@@ -8,11 +15,17 @@
 #include <esp_task_wdt.h>
 
 // Practice mode (Button desabled) for easy launches while testing
-#define PRACTICE_MODE true
+#define PRACTICE_MODE false
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
-#define ENABLE_TELEMETRY false
+#define ENABLE_TELEMETRY true
+
+#define PARKING_LANE_DISTANCE 325
+
+#define ROTATING_SPEED_LIDAR 200
+
+#define TURNS_TO_UPDATE 1
 
 /*#if ENABLE_WIFI == true
 #include <OTAUpdate.h>
@@ -28,9 +41,9 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 #endif
 */
 // Speeds
-#define StartSpeed 4
-#define CruisiereSpeed 8
-#define NormalSpeed 7
+#define StartSpeed 2
+#define CruisiereSpeed 6
+#define NormalSpeed 4
 
 /*
  *  Speed infromation
@@ -125,7 +138,7 @@ uint8_t giros = 0;
 uint8_t totalGiros = 0;
 // section in which the car is
 uint8_t tramo = 1;
-// sense of turn
+// turnSense = 1 when ANTICLOCKWISE; turnSense = -1 when CLOCKWISE
 int8_t turnSense = 0;
 // whether you have to turn clockwise or not
 bool turnClockWise;
@@ -152,7 +165,7 @@ uint16_t distancia270;
 
 //Constrain variable de la posición, para que se abra un poco...
 #define constrainNormal 90
-#define constrainAbrir 102
+#define constrainAbrir 120
 
 int ConstrainVariable = constrainNormal;
 
@@ -195,6 +208,7 @@ uint16_t tramos[2][8] = {
   {500,500,2500,2500,2500,2500,500,500},
   {mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, mapSize - trackCenter, trackCenter, trackCenter, trackCenter, trackCenter}
 };
+
 uint8_t arrayBloques[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 const uint16_t blockPaths[2][4][3] =
 {
@@ -287,7 +301,6 @@ void moveCamera(int8_t angle);
 void autoMoveCamera();
 void enableCamera();
 void updatePosition();
-void updatePositionMagicaPrimeraVuelta();
 
 void saveParkingPosition();
 
@@ -374,7 +387,7 @@ void setup() {
   delay(500);
   //pitiditos(4);
   // start lidar's motor rotating at max allowed speed
-  analogWrite(pinLIDAR_motor, 255);
+  analogWrite(pinLIDAR_motor, ROTATING_SPEED_LIDAR);
   delay(500);
 
   // initialize y position and wait until the turn sense is decided and the x coordinate is calculated
@@ -424,7 +437,8 @@ void setup() {
   mimpu.MeasureFirstMicros();
 
 
-  
+  digitalWrite(pinLED_batAmarillo, HIGH);
+
   setSpeed(StartSpeed);
 }
 
@@ -487,7 +501,7 @@ void loop() {
   #if ENABLE_TELEMETRY == true
   // send telemetry every 100ms
   static uint32_t prev_ms_tele = millis();
-  if (millis() > prev_ms_tele + 100)
+  if (millis() > prev_ms_tele + 250)
   {
     distancia0 = readDistance(0);
     distancia90 = readDistance(90);
@@ -498,8 +512,8 @@ void loop() {
       0xAA,0xAA,0xAA,0xAA,0x--,0x--...0x--
     */
    /*ENVIAMOS PAQUETE TIPO 4 DISTANCIAS*/
-   
-    /*for(int i = 0; i<4; i++){
+   /*
+    for(int i = 0; i<4; i++){
       teleSerial.write(0xAA);
     }
     teleSerial.write(04);
@@ -519,8 +533,8 @@ void loop() {
     while (pi < 360){
         teleSerial.write(distancesMillis[pi]);
         pi++;
-    }*/
-
+    }
+    */
     /*ENVIAMOS PAQUETE TIPO 5 INFORMACION GENERAL*/
     
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
@@ -626,6 +640,7 @@ void loop() {
       setSpeed(CruisiereSpeed);
     }
   break;
+
   case e::Final:  // we probably want to be redirected to here after we finish the parking manouver ---------------------------------------------
     setSteering(0);
     analogWrite(pinLIDAR_motor, 0);
@@ -644,6 +659,7 @@ void loop() {
       estadoEsperar(e::Reposicionar, 3000);
     }
   break;
+
   case e::Reposicionar:
     distancia0 = readDistance(0);
     if (distancia0 > 0)
@@ -657,12 +673,19 @@ void loop() {
   break;
 
   case e::Posicionamiento:
-    objectivePosition = startXposition - 255*turnSense;
+    //Usamos mejor sistema de posicionamiento para no depender de donde hemos puesto originalmente el robot (como pasaba antes)
+    if (turnClockWise == true)
+    {
+      objectivePosition = PARKING_LANE_DISTANCE;
+    }else{
+      objectivePosition = 3000 - PARKING_LANE_DISTANCE;
+    }
     //KPActual = positionKP;
     isParking = true;
     setSpeed(StartSpeed);
     estado = e::Aparcar1;
   break;
+
   case e::EntradaFase1:
     if (yPosition >= parkingY)
     {
@@ -705,7 +728,7 @@ void loop() {
   */
   
   case e::Aparcar1:
-    if (yPosition >= 1410 + 530 - 530*turnClockWise)
+    if (yPosition >= 1390 + 530 - 530*turnClockWise)
     {
       setSpeed(0);
       pidEnabled = false;
@@ -720,7 +743,7 @@ void loop() {
   break;
 
   case e::Aparcar3:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 80) {
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 90) {
       setSpeed(0);
       estadoEsperar(e::Aparcar35, 200);
     }
@@ -733,9 +756,9 @@ void loop() {
   break;
 
   case e::Aparcar4:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 5) {
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 12) {
       setSpeed(0);
-      estadoEsperar(e::Aparcar5, 1000);
+      estadoEsperar(e::Final, 500);
     }
   break;
 
@@ -839,16 +862,16 @@ void receiveData() {
 
 void manageTension(uint8_t tension) {
   if (tension == 1) {
-    digitalWrite(pinLED_batAmarillo, LOW);
+    //digitalWrite(pinLED_batAmarillo, LOW);
     digitalWrite(pinLED_batRojo, LOW);
     digitalWrite(pinLED_batVerde, HIGH);
   } else if (tension == 2) {
     digitalWrite(pinLED_batVerde, LOW);
     digitalWrite(pinLED_batRojo, LOW);
-    digitalWrite(pinLED_batAmarillo, HIGH);
+    //digitalWrite(pinLED_batAmarillo, HIGH);
   } else if (tension == 3) {
     digitalWrite(pinLED_batVerde, LOW);
-    digitalWrite(pinLED_batAmarillo, LOW);
+    //digitalWrite(pinLED_batAmarillo, LOW);
     digitalWrite(pinLED_batRojo, HIGH);
   }
 }
@@ -1000,10 +1023,11 @@ void iteratePositionPID() {
 
 void turn() {
   enableCamera();
+  ConstrainVariable = constrainNormal;
   switch ((tramo+1) * turnSense)
   {
   case -2:
-    ConstrainVariable = constrainAbrir;
+    //if () ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][1][arrayBloques[2]];
     fixInverted = false;
     fixXposition = false;
@@ -1011,7 +1035,7 @@ void turn() {
     break;
   
   case -4:
-    ConstrainVariable = constrainAbrir;
+    //if () ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][2][arrayBloques[4]];
     fixInverted = false;
     fixXposition = true;
@@ -1019,7 +1043,7 @@ void turn() {
     break;
 
   case -6:
-    ConstrainVariable = constrainAbrir;
+    //if () ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][3][arrayBloques[6]];
     fixInverted = true;
     fixXposition = false;
@@ -1027,7 +1051,7 @@ void turn() {
     break;
 
   case -8:
-    ConstrainVariable = constrainAbrir;
+    //if () ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][0][arrayBloques[0]];
     fixInverted = true;
     fixXposition = true;
@@ -1036,7 +1060,7 @@ void turn() {
     break;
   
   case 2:
-    ConstrainVariable = constrainAbrir;
+    if (xPosition < 2600) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][1][arrayBloques[2]];
     fixInverted = true;
     fixXposition = false;
@@ -1044,7 +1068,7 @@ void turn() {
     break;
   
   case 4:
-    ConstrainVariable = constrainAbrir;
+    if (yPosition < 2600) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][2][arrayBloques[4]];
     fixInverted = false;
     fixXposition = true;
@@ -1052,7 +1076,7 @@ void turn() {
     break;
 
   case 6:
-    ConstrainVariable = constrainAbrir;
+    if (xPosition > 400) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][3][arrayBloques[6]];
     fixInverted = false;
     fixXposition = false;
@@ -1060,7 +1084,7 @@ void turn() {
     break;
 
   case 8:
-    ConstrainVariable = constrainAbrir;
+    if (yPosition > 400) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][0][arrayBloques[0]];
     fixInverted = true;
     fixXposition = true;
@@ -1096,7 +1120,7 @@ void checkTurn() {
   case -2:
     if ((yPosition <= 1600) && setCoordTramo(1, 200, 800)) correctLane(1);
     if (yPosition >= 2000) turn();
-    if (totalGiros >= 4) {
+    if (totalGiros >= 5) {
       isRecognizing = false;
       isMoveCamera = false;
       moveCamera(0);
@@ -1111,7 +1135,6 @@ void checkTurn() {
   case -4:
     if ((xPosition <= 1600) && (setCoordTramo(3, 2800, 2200))) correctLane(3);
     if (xPosition >= 2000) {
-      //updatePositionMagicaPrimeraVuelta();
       turn();
     }
     break;
@@ -1134,7 +1157,7 @@ void checkTurn() {
   case -8:
     if ((xPosition >= 1400) && (setCoordTramo(7, 200, 800))) correctLane(7);
     if (xPosition <= 1000) {
-      updatePosition();
+      if(totalGiros > TURNS_TO_UPDATE)updatePosition();
       turn();
     }
     break;
@@ -1147,7 +1170,7 @@ void checkTurn() {
   case 2:
     if ((yPosition <= 1600) && setCoordTramo(1, 2200, 2800)) correctLane(1);
     if (yPosition >= 2000) turn();
-    if (totalGiros >= 4) {
+    if (totalGiros >= 5) {
       isRecognizing = false;
       isMoveCamera = false;
       moveCamera(0);
@@ -1162,7 +1185,6 @@ void checkTurn() {
   case 4:
     if ((xPosition >= 1400) && (setCoordTramo(3, 2200, 2800))) correctLane(3);
     if (xPosition <= 1000){
-      //updatePositionMagicaPrimeraVuelta();
       turn();
     }
     break;
@@ -1185,7 +1207,7 @@ void checkTurn() {
   case 8:
     if ((xPosition <= 1600) && (setCoordTramo(7, 800, 200))) correctLane(7);
     if (xPosition >= 2000){
-      updatePosition();
+      if (totalGiros > TURNS_TO_UPDATE) updatePosition();
       turn();
     }
     break;
@@ -1484,6 +1506,8 @@ void saveParkingPosition() {
 
 void updatePosition() {
   setSpeed(0);
+  digitalWrite(pinLED_batAmarillo, LOW);
+
 
   //uint32_t temptime = millis() + 2000;
   /*while (millis() < temptime)
@@ -1518,34 +1542,41 @@ void updatePosition() {
     uint16_t xtemp = 0;
     uint16_t ytemp = 0;
     uint32_t tmax = millis() + 8000;
-    bool diditfail = false;
+    bool diditfailX = false;
+    bool diditfailY = false;
 
     ytemp = readDistance(180);
-    while ((ytemp < 10) || (abs((ytemp - yPosition)) > 200)){
+    while ((ytemp < 10) || (abs((ytemp - yPosition)) > 200))
+    {
       mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
-        diditfail = true;
+        diditfailY = true;
+        digitalWrite(pinLED_batAmarillo, LOW);
         break;
       }
       ytemp = readDistance(180);
     } 
     tmax = millis() + 8000;
     xtemp = readDistance(270);
-    while( (xtemp < 10) || (abs((xtemp + lidarToImu - xPosition)) > 200)){
+    while( (xtemp < 10) || (abs((xtemp + lidarToImu - xPosition)) > 200))
+    {
       mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
-        diditfail = true;
+        diditfailX = true;
+        digitalWrite(pinLED_batAmarillo, LOW);
         break;
       }   
       xtemp = readDistance(270);   
     }
-    if(!diditfail){
-      setXcoord(xtemp + lidarToImu);
+    if(!diditfailY){
       yPosition = ytemp;
+    }
+    if(!diditfailX){
+      setXcoord(xtemp + lidarToImu);
     }
   }
   else{
@@ -1555,33 +1586,40 @@ void updatePosition() {
     uint16_t xtemp = 0;
     uint16_t ytemp = 0;
     uint32_t tmax = millis() + 8000;
-    bool diditfail = false;
+    bool diditfailY = false;
+    bool diditfailX = false;
 
     ytemp = readDistance(180);
-    while ( (ytemp < 10) || (abs((ytemp - yPosition)) > 200)){
+    while ( (ytemp < 10) || (abs((ytemp - yPosition)) > 200))
+    {
       mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
-        diditfail = true;
+        diditfailY = true;
+        digitalWrite(pinLED_batAmarillo, LOW);
         break;
       }
       ytemp = readDistance(180);
     } 
     tmax = millis() + 8000;
     xtemp = readDistance(90);
-    while( (xtemp < 10) || (abs((3000 - xtemp - lidarToImu - xPosition)) > 200)){
+    while( (xtemp < 10) || (abs((3000 - xtemp - lidarToImu - xPosition)) > 200))
+    {
       mimpu.UpdateAngle();
       delay(20);
       if (millis() > tmax){
         //pitiditos(10);
-        diditfail = true;
+        diditfailX = true;
+        digitalWrite(pinLED_batAmarillo, LOW);
         break;
       }
       xtemp = readDistance(90);      
     }
-    if(!diditfail){
+    if(!diditfailX){
       setXcoord(3000 - xtemp - lidarToImu);
+    }
+    if(!diditfailY){
       yPosition = ytemp;
     }
     
@@ -1686,104 +1724,4 @@ void teleEnviar(){
     teleSerial.write(byte(01));
     enviarDato((byte*)&arrayBloques,sizeof(arrayBloques));
     teleSerial.write(0x00);teleSerial.write(0x00);
-}
-
-
-void updatePositionMagicaPrimeraVuelta() {
-  setSpeed(0);
-
-  uint32_t temptime = millis() + 2000;
-  while (millis() < temptime)
-  {
-
-  }
-
-
-  //teleEnviar();
-  //analogWrite(pinLIDAR_motor, 255);
-
-  for (int i = 0; i < 360; i++) {
-    distances[i] = 0;
-    distancesMillis[i] = 0;
-  }
-
-  lidarEnabled = true;
-  //pitiditos(3);
-
-  temptime = millis() + 2000;
-  while (millis() < temptime)
-  {
-
-  }
-
-  if (turnClockWise)
-  {
-    //yPosition=readDistance(180);
-    //setXcoord(readDistance(270) + lidarToImu);
-    // *** Se modifica para no aceptar medidas inferiores a 10
-    uint16_t xtemp = 0;
-    uint16_t ytemp = 0;
-    uint32_t tmax = millis() + 8000;
-    bool diditfail = false;
-
-    while ( (ytemp = readDistance(0)) < 10 || abs((3000 - ytemp - yPosition)) > 100){
-      delay(100);
-      if (millis() > tmax){
-        //pitiditos(10);
-        diditfail = true;
-        break;
-      }
-    } 
-    tmax = millis() + 8000;
-    while( (xtemp = readDistance(90)) < 10 || abs((3000 -xtemp - lidarToImu - xPosition)) > 100){
-      delay(100);
-      if (millis() > tmax){
-        //pitiditos(10);
-        diditfail = true;
-        break;
-      }      
-    }
-    if(!diditfail){
-      setXcoord(3000 -xtemp - lidarToImu);
-      yPosition = 3000 - ytemp;
-    }
-  }
-  else{
-    //yPosition=readDistance(180);
-    //setXcoord(3000 - readDistance(90) - lidarToImu);
-    // *** Se modifica para no aceptar medidas inferiores a 10
-    uint16_t xtemp = 0;
-    uint16_t ytemp = 0;
-    uint32_t tmax = millis() + 8000;
-    bool diditfail = false;
-
-    while ( (ytemp = readDistance(0)) < 10 || abs((3000-ytemp - yPosition)) > 100){
-      delay(100);
-      if (millis() > tmax){
-        //pitiditos(10);
-        diditfail = true;
-        break;
-      }
-    } 
-    tmax = millis() + 8000;
-    while( (xtemp = readDistance(270)) < 10 || abs((xtemp + lidarToImu - xPosition)) > 100){
-      delay(100);
-      if (millis() > tmax){
-        //pitiditos(10);
-        diditfail = true;
-        break;
-      }      
-    }
-    if(!diditfail){
-      setXcoord(xtemp + lidarToImu);
-      yPosition = 3000-ytemp;
-    }
-    
-
-  }
-  delay(500);
-  lidarEnabled = false;
-  //analogWrite(pinLIDAR_motor, 0);
-  //teleEnviar();
-  setSpeed(CruisiereSpeed);
 }
