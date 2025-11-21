@@ -19,7 +19,7 @@
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
-#define ENABLE_TELEMETRY true
+#define ENABLE_TELEMETRY false
 
 #define PARKING_LANE_DISTANCE 325
 
@@ -736,7 +736,7 @@ void loop() {
   */
   
   case e::Aparcar1:
-    if (yPosition >= 1390 + 530 - 530*turnClockWise)
+    if (yPosition >= 1380 + 530 - 530*turnClockWise)
     {
       setSpeed(0);
       pidEnabled = false;
@@ -751,7 +751,7 @@ void loop() {
   break;
 
   case e::Aparcar3:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 90) {
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 105) {
       setSpeed(0);
       estadoEsperar(e::Aparcar35, 200);
     }
@@ -1035,7 +1035,7 @@ void turn() {
   switch ((tramo+1) * turnSense)
   {
   case -2:
-    //if () ConstrainVariable = constrainAbrir;
+    if (xPosition > 400) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][1][arrayBloques[2]];
     fixInverted = false;
     fixXposition = false;
@@ -1043,7 +1043,7 @@ void turn() {
     break;
   
   case -4:
-    //if () ConstrainVariable = constrainAbrir;
+    if (yPosition < 2600) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][2][arrayBloques[4]];
     fixInverted = false;
     fixXposition = true;
@@ -1051,7 +1051,7 @@ void turn() {
     break;
 
   case -6:
-    //if () ConstrainVariable = constrainAbrir;
+    if (xPosition < 2600) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][3][arrayBloques[6]];
     fixInverted = true;
     fixXposition = false;
@@ -1059,7 +1059,7 @@ void turn() {
     break;
 
   case -8:
-    //if () ConstrainVariable = constrainAbrir;
+    if (yPosition > 400) ConstrainVariable = constrainAbrir;
     objectivePosition = blockPaths[turnClockWise][0][arrayBloques[0]];
     fixInverted = true;
     fixXposition = true;
