@@ -84,4 +84,21 @@ Innecesary states were removed; added track constants and the ENABLE_TELEMETRY d
 Telemetry was unified, distance90 and distance270 were added to phase 2.
 Finally, an problem with the transition from state e::Inicio to e::Recto, in which if the turnSense was decided too soon, e::Recto would never be reached.
 
-## August 24th 
+## August 24th Camera block selection logic
+We continued working on the Camera Testing project to work on the camera code. We aim for a better detection of the colour blocks by filtering the colour blocks depending on their width, height and the ratio of both. Since the blocks are rectangular prisms, we aim to detect an upward rectangle, such that the height/width ratio is greater than 1.
+Some improvement to the telemetry has been made, spliting the camera data into another packet so that it only gets sent when there is new data. Additionally the age of the lidar measurements has been sent.
+
+## August 26th Small Slave camera changes
+Initialised the Husky to the Color Detection Algorithm by default, checked the conexion state and requested blocks before calling our filter function.
+Added the decodification of the camera data to the receiver. Sent arrayBlocks through telemetry for an easier check of the colour blocks detected. This way we could check the filter algorithm better. Finally, for an easier debug, we have sent the millis as a packet timestamp.
+We have added a header to each source file of our official projects, which refers to our repository and indicates the license associated with the file.
+
+## September 1st README updates
+We have further written the README file to better document our project. Images were added for an easier explanation of the robot.
+
+## September 2nd Exiting the parking
+Now that we have sorted the colour block detection we deal with the new feature introduced this year, parking.
+We created a new project in extras to tackle the parking slot start and parking. We first intend to solve the start from the slot to test our car's steering on the slot.
+Starting on the parking slot, we have decided that our robot should measure the distance to both side walls, whichever is greater shows the side to which we should turn to exit the slot. It turns out that we can use this information to decide the sense of turn and to set the X positon from start. On the other hand, now we cannot measure the Y distance from start since this distance is blocked by the slot walls.
+Since the parking slot prevents traffic lights to be placed on the exterior of the 1st lane, we have moved inwards the exterior path of the car on the lane, preventing collisions with the parking slot.
+We have deactivated the function that made the car turn around on the final lap. We have also incremented the speed increment to the 6th turn, but this doesn't seem to work.
