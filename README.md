@@ -2,9 +2,10 @@
 **This is our repository for the 2025 season of the WRO Future Engineer Challenge**
 
 ***
-<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true">
+<img src="https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true" alt="Picture of our team in the 2025 Spanish National Final">
 
 ## TABLE OF CONTENTS
+
 * [Hardware](#hardware)
     * [Car movement](#car-movement)
     * [Structural design](#structural-design)
@@ -36,26 +37,28 @@
 ![Gif Bueno 2](https://github.com/user-attachments/assets/385ce729-b5dd-4619-9c90-0f068bab1b64)
 
 ## HARDWARE
+
 Designing a self-driving car for these challenges requires a meticulous design process to achieve an optimal final result that meets the needs of the challenge and the potential obstacles that may arise during the programming process and the competition itself.
 
 In our case, in order to reduce development times and finding it more feasible and simple to rely on existing resources than having to design a new chassis from scratch, we decided to use a remote-controlled car kit that we then modified extensively to adapt it to our particular needs.
 
 ### Car movement
+
 We can highlight as the main modification the redesign of the turning system to allow tighter turns, since the original kit was deficient in this aspect and forced us to have to maneuver to be able to turn correctly during the competition and, although this is contemplated in the regulations, it made us lose a lot of time and increased the total complexity of the strategy. The redesign required the creation of new parts that have been designed by ourselves and whose 3D files can be found in our repository in the section [`robot-info`](/robot-info/).We have printed these parts with our 3D printer, which also reduces costs and allows us to easily create different versions if we see that they fail or not.
-	
+
 With these changes to the turning system we have implemented the **Ackerman's Steering Geometry**,this mechanism allows the turning wheels to take different paths when turning, since the turning radius of the inner wheel is smaller than that of the outer wheel, thus the angle of each turning wheel is different. This implementation allows for better turning, and with certain tweaks, we have minimized the required turning radius. This mechanism is actuated by a generic servo **DSM44 Servo**. It has the necessary torque and speed without being a problem in terms of power consumption. In the following images, we can see the nature of why this mechanism is necessary, a simplified version of how it works, and our design of the mechanism for our robot.
 
 | | |
 | ------------------------- | ------------------------- |
 | ![ ](./photos/readme-photos/Ackerman's%20Steering%20Geometry%20diagram.png) | ![ ](./photos/readme-photos/Ackerman's%20Steering%20Geometry%20in%20our%20robot.png) |
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/implementatation-ackerman.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/implementatation-ackerman.jpg?raw=true" width="800" alt="Car front view of the steering design">
 
 More information about Ackerman's Steering Geometry can be found in [this Wikipedia article](https://en.wikipedia.org/wiki/Ackermann_steering_geometry).
 
 According to competition regulations, only one motor can drive a drive axle. Therefore, in our case, we made the rear axle the drive axle to which the motor is connected. This is how the original kit was made. We also used the differential that came with the kit for proper operation. The differential allows the rear wheels to travel different distances, since the arc that each wheel travels is different when turning, as the turning radius of each wheel also varies. For our robot, we also used the motor that came with the kit; you can see the image below.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Motor%20Area.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Motor%20Area.jpg?raw=true" width="500" alt="Side view of the motor">
 
 This motor provides us with the necessary torque to comfortably move the robot without it getting stuck. In our case, we're not trying to get the robot to go at maximum speed, so the robot's overall speed wasn't a relevant factor when choosing the motor.
 
@@ -67,21 +70,22 @@ First of all, we can distinguish the **LiDAR** Located on the front of the robot
 
 Secondly, below the LiDAR is the space needed to place the components of the **Ackerman's Steering Geometry** and the **servo** in charge of turning the wheels.
 
-Thirdly, at the rear we can see from above the **PCB**, which houses much of our car's electronics, further on in [PCB](#PCB) we detail its design. Just below the PCB is the **motor** and the **differential** that drives the drive axle.
+Thirdly, at the rear we can see from above the **PCB**, which houses much of our car's electronics, further on in [PCB](#pcb) we detail its design. Just below the PCB is the **motor** and the **differential** that drives the drive axle.
 
 Finally, at the rear, the metal mast that raises and holds our **camera** is held on a 3D-designed base to the vehicle.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/LiDAR%20Area.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/LiDAR%20Area.jpg?raw=true" width="500" alt="Top view of the car">
 
 ## ELECTRONICS AND SENSORS
 
 Our robot is made up of a whole series of electronic components and sensors that work together to provide us with the best possible information so we can perform our tasks. We must emphasize the use of information from multiple sensors simultaneously to reduce errors.
-	
+
 Below we provide a detailed list of all the electronic components that make up the car, along with a detailed description of their functionality and the advantages that led us to use them.
 
 ### List of components
+
 * DOIT ESP32 DevKit V1 x2
-* HuskyLens	
+* HuskyLens
 * RPLiDAR A1 M8
 * MPU 9250
 * Pololu Magnetic Encoder
@@ -101,19 +105,19 @@ To bring our autonomous car project to fruition, we opted for the ESP-32 microco
 
 3. Sensor and Actuator Compatibility: The ESP-32's adaptability extends to sensor and actuator integration. With its multitude of I/O (input/output) pins and versatile interface options, we effortlessly connected and controlled various sensors, including the IMU and LiDAR, as well as the steering servos.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/robot-info/Diagrams/ESP32-DOIT-DEV-KIT-v1-pinout.png?raw=true" width="600">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/robot-info/Diagrams/ESP32-DOIT-DEV-KIT-v1-pinout.png?raw=true" width="600" alt="Pinout of the ESP32 DevKit V1">
 
 We integrated two ESP32s into our robot, as it was necessary due to the large amount of information they must analyze from all the sensors and the decisions they must make. For this purpose, we call one ESP32 "Slave," to which several sensors are connected. After analyzing this information, it sends it to another ESP32, which we call "Master." Other sensors are connected to this ESP32, and it is responsible for executing all the movement commands.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/ESP32%20Diagram%20of%20connections.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/ESP32%20Diagram%20of%20connections.jpg?raw=true" width="500" alt="Connection diagram">
 
 #### HuskyLens (Camera)
 
 The HuskyLens camera was our choice because it gives us a larger horizontal field of view compared to other available cameras and also incorporates several algorithmic options to be able to detect a wide variety of things, such as distinguishing colors, people, objects, codes, etc. We also chose it because of its improved data processing capacity, which is superior to the alternatives we had locally and which also allows us to train it much better than other cameras, thus guaranteeing a great improvement in precision and allowing us to adjust to the lighting conditions of the competition venue.
-	
+
 The camera's sole function is to detect the colored blocks, indicate their position on the camera, and indicate their color. We train it for all of this before the competition.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/HuskyLens%20camera.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/HuskyLens%20camera.jpg?raw=true" width="500" alt="Image of a HUSKY Lens">
 
 #### RPLiDAR A1 M8 (LiDAR)
 
@@ -129,7 +133,7 @@ Rather than relying on traditional ultrasonic sensors for obstacle detection, we
 
 During the match the LiDAR technology is used to establish the initial position of the robot and the direction of the game. In this way the random initial conditions do not affect the outcome of the match.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/RPLiDAR%20A1%20M8%20image.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/RPLiDAR%20A1%20M8%20image.jpg?raw=true" width="500" alt="Image of an RPLIDAR A1">
 
 #### MPU 9250 and Pololu Magnetic Encoder (IMU and encoder)
 
@@ -145,11 +149,12 @@ The LED was connected directly to the battery and main power switch, ensuring th
 
 After the competition, we analyzed that the camera still had occasional problems, and we eventually redesigned the camera's code to avoid these issues. Our robot still has the space and components necessary to reinstall the LED if we deem it necessary during the competition, although, as we have already mentioned, this shouldn't be the case.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Camera%20LED.jpg?raw=true" width="500">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Camera%20LED.jpg?raw=true" width="500" alt="Image of the camera's LED lantern">
 
 ### Sensor list
 
 As we can see, our robot only uses the following sensors, whose data are used in unison by our microcontrollers to maximize reliability and be able to solve the different challenges that this competition poses to us.
+
 * LiDAR
 * IMU
 * Encoder
@@ -164,7 +169,7 @@ Our PCB contains several power sources that distribute power correctly and effic
 1. Dual 5-Volt Power Supplies: One 5-volt power supply was dedicated to powering the LiDAR system, while the other supplied power to the steering servos. This separation of power sources allowed us to optimize the energy delivery to these critical components, ensuring their reliable operation.
 
 2. 3.3-Volt Power Supply: A dedicated 3.3-volt power supply was employed to energize the microcontrollers, IMU (Inertial Measurement Unit), motor drivers, and LED lights. This voltage level was carefully chosen to meet the requirements of these electronic components, guaranteeing stable and consistent performance.
-	
+
 By employing these distinct power sources, we effectively managed the power needs of our autonomous car's various subsystems, ensuring that each component received the appropriate voltage and current for reliable operation. This meticulous power management contributed to the overall success and stability of our robotics project.
 
 ### PCB
@@ -173,11 +178,11 @@ To seamlessly connect and control all the components of our autonomous car, we d
 
 Our custom PCB design allowed for cleaner wiring, reduced interference, and enhanced reliability. It simplified the process of connecting and configuring various sensors and actuators, enabling smoother integration and troubleshooting during the development phase.
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB%20Design.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB%20Design.jpg?raw=true" width="800" alt="Layer design image of the PCB">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Schematic%20PCB.png?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/Schematic%20PCB.png?raw=true" width="800" alt="Schematic diagram of the circuit">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB-real.jpg?raw=true" width="800">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/readme-photos/PCB-real.jpg?raw=true" width="800" alt="Top view of the finished PCB">
 
 ## STRATEGY AND OPERATION OF THE CODE
 
@@ -185,10 +190,12 @@ As we mentioned before, the code is divided into two parts, one for the ESP32 �
 
 On the other hand, due to the large variations between the two challenges, we found two separate codes for the ESP32 "Master," one used only in the Open Challenge rounds and the other for the Obstacle Challenge rounds. This gives us two separate codes that allow us to better address the bugs and challenges of each category.
 
+For more information on the code structure and the upload protocol, go to [code](code/README.md).
+
 ### How the “Slave” code works
 
 The “Slave” code is responsible for collecting data from various sensors and sending it via serial to the “Master” for processing and analysis. On the other hand, the “Slave” receives data via serial to move the motor and servo from the “Master”.
-	
+
 The "Slave" also has the function of cleaning and filtering the camera information. Due to the way the HuskyLens works, it is very likely that it will mistakenly detect the orange line on the dashboard as if it were a red block, or even detect the parking barriers as red blocks. This is clearly detrimental to the robot's operation and can lead to errors. To avoid these errors, the "Slave" only sends to the "Master" the block that is closest to the camera and that is not a square or a horizontal rectangle (this is because the camera detects objects in squares that encompass the surface of the detected object, not the object's actual shape). This prevents detection errors.
 
 ### Location of the robot on the board
@@ -202,7 +209,7 @@ To determine the car's exact location on the dashboard, the same system is used 
 ### Open Challenge Strategy
 
 In the Open Challenge, the robot must complete three laps of the circuit from a random starting position and direction and must be able to finish in the same starting section. In addition, the size of the central square varies from round to round, adding additional difficulty.
-	
+
 With the information from the previous paragraph in mind, our strategy is based on correctly determining our position on the board and then completing the circuit from there. Our robot has no knowledge of the size of the central square, as it simply navigates an imaginary circuit that is larger than the maximum limits of the central square, as we can see in the images.
 
 | | |
@@ -239,7 +246,6 @@ When the robot reaches the last corner of each lap, it stops, remaining perpendi
 
 Finally, after the three laps and the final recalibration, the robot enters "parking" mode. It then slowly approaches the parking position, maneuvers back slowly, and finally parks. In this mode, we significantly increased the turning radius (KP) and turning radius (KD) to maximize the robot's turning capabilities and enable it to park in the limited available space.
 
-
 ## PHOTOS
 
 ### Car images
@@ -252,14 +258,13 @@ Finally, after the three laps and the final recalibration, the robot enters "par
 
 ### Team images
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Funny%20Image.jpg?raw=true" width="700">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Funny%20Image.jpg?raw=true" width="700" alt="Funny photo of the team">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%201.jpg?raw=true" width="700">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%201.jpg?raw=true" width="700" alt="Official team photo">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true" width="700">
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%202.jpeg?raw=true" width="700" alt="Our team in the National Final">
 
-<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpeg?raw=true" width="700">
-
+<img src = "https://github.com/qu4Vix/WRO-GammaVersion-2025/blob/main/photos/team-photos/Team%20Photo%203.jpeg?raw=true" width="700" alt="Our team holding the Spanish champions trophy">
 
 ## DEMONSTRATION VIDEOS
 
@@ -281,6 +286,7 @@ The documentation of this repository; found in [`robot-info`](/robot-info/), [`v
 A copy of each license can be found in the [LICENSE](LICENSE) file. More information about the licenses in the specific README.md of each section.
 
 ## CONTACT AND SOCIAL MEDIA
+
 This year, as we approached this challenge once again, we decided to resume our presence on social media through our Instagram account ([@gammaversiondiverbot](https://www.instagram.com/gammaversiondiverbot/)). With this account, we have been actively sharing our progress and journey from the beginning to the present day.
 
 Furthermore, immediately after winning the WRO 2025 National Final in Spain we launched a website to showcase our team more openly and professionally, especially to find sponsors willing to help us cover the costs of traveling to Singapore. We share this website with another team from our academy that also participates in the competition under the name "Alfa Centauri."
@@ -300,5 +306,3 @@ HERE ARE OUR CONTACT AND DISSEMINATION PLATFORMS
 ## CREDITS
 
 We would like to thank DiverBOT and its team Javier and Ana for their help given to this project.
-
-
