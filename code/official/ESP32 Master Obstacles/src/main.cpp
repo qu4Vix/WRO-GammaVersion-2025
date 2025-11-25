@@ -1,9 +1,21 @@
-// TO DO
-// Poner el no abrir angulo al clockwise
+/***************************************************
+ * 
+ * THE MAIN REPOSITORY CAN BE FOUND AT https://github.com/qu4Vix/WRO-GammaVersion-2025
+ * 
+ * This code is under a GPL-3.0 license. More information can be found in the License file
+ * in the repository.
+ * 
+****************************************************/
 
-
-
-
+/***************************************************
+ * 
+ * This is the code for the "Main" ESP32 of our robot, which it is responsible for controlling
+ * some sensors and to make all the decisions.
+ * 
+ * THIS VERSION OF THE ESP32 MASTER CODE IS ONLY FOR THE OBSTACLE CHALLENGE
+ * For the Open Challenge use "ESP32 MASTER"
+ *  
+****************************************************/
 
 #include <Arduino.h>
 #include <AdvancedMPU.h>
