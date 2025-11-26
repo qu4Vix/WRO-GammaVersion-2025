@@ -1,6 +1,6 @@
 import socket
 
-LOCAL_UDP_IP = "192.168.144.235"
+LOCAL_UDP_IP = "192.168.0.100"
 SHARED_UDP_PORT = 5007
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet  # UDP
 sock.bind((LOCAL_UDP_IP, SHARED_UDP_PORT))
