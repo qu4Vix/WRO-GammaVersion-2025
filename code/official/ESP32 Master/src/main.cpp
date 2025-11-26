@@ -39,7 +39,7 @@
 #define ENABLE_WIFI false       // WIFI IS NOT USED ON THIS BOARD DURING THE MATCH, only for debug purpose
 
 // This enables the transmission of telemetry used for debugging. In normal situations it is not needed to set this define to FALSE.
-#define ENABLE_TELEMETRY true   
+#define ENABLE_TELEMETRY false
 
 // Speeds
 #define StartSpeed 4
@@ -413,7 +413,7 @@ void loop() {
   // ONLY GOD KNOWS WHAT IS HAPPENING HERE
   static uint32_t prev_ms_direction = millis();
   if (millis() > prev_ms_direction) {
-    actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -127, 127);
+    actual_directionError = constrain(directionError(mimpu.GetAngle(), objectiveDirection), -90, 90);
     int _setAngle = servoKP * actual_directionError + servoKD * (actual_directionError - prev_directionError);
     if(_setAngle != prev_setAngle) {
       setSteering(_setAngle*motionDirection);

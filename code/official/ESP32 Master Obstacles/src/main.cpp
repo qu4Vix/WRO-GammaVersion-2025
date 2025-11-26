@@ -31,7 +31,7 @@
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
-#define ENABLE_TELEMETRY false
+#define ENABLE_TELEMETRY true
 
 #define PARKING_LANE_DISTANCE 325
 
@@ -521,11 +521,12 @@ void loop() {
   #if ENABLE_TELEMETRY == true
   // send telemetry every 100ms
   static uint32_t prev_ms_tele = millis();
-  if (millis() > prev_ms_tele + 250)
+  if (millis() > prev_ms_tele + 500)
   {
+    /*
     distancia0 = readDistance(0);
     distancia90 = readDistance(90);
-    distancia270 = readDistance(270);
+    distancia270 = readDistance(270);*/
 
     /*FORMATO TELEMETRIA
     |inicioTX            |TipoPaquete|Datos|
@@ -582,7 +583,7 @@ void loop() {
     enviarDato((byte*)&distancia0,sizeof(distancia0));
     enviarDato((byte*)&distancia90,sizeof(distancia90));
     enviarDato((byte*)&distancia270,sizeof(distancia270));
-    
+    /*
     for(int i = 0; i<4; i++){   //Enviamos la cabecera de inicio de paquete
       teleSerial.write(0xAA);
     }
@@ -608,7 +609,7 @@ void loop() {
     }
     teleSerial.write(byte(00));
     teleSerial.write("TG: ");
-    teleSerial.write(totalGiros);
+    teleSerial.write(totalGiros);*/
     
     prev_ms_tele = millis();
   }
@@ -653,7 +654,7 @@ void loop() {
     setSpeed(NormalSpeed);
   break;
   case e::Recto:
-    if (totalGiros == 12) {
+    if ((totalGiros == 12) && (tramo==1)) {
       estado = e::Posicionamiento;
     }
     if (totalGiros == 5) {
@@ -671,6 +672,7 @@ void loop() {
   break;
 
   case e::Arrancar:
+    correctLane(1);
     //Ajustar el avance para que no se pase del bloque y tal...
     if (xPosition*turnSense <= startXposition*turnSense - 150)
     {
@@ -776,9 +778,11 @@ void loop() {
   break;
 
   case e::Aparcar4:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 12) {
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 3) {
       setSpeed(0);
       estadoEsperar(e::Final, 500);
+    } else {
+      setSpeed(-NormalSpeed);
     }
   break;
 
@@ -787,7 +791,7 @@ void loop() {
       estado = marcaEstado;
     }
   break;
-
+    /*
   case e::Aparcar5:
     if ((mimpu.GetAngle()*turnSense - 90*totalGiros) < -3){
         setSpeed(StartSpeed);
@@ -804,7 +808,7 @@ void loop() {
         setSpeed(0);
         estado = e::Final;
       }
-  break;
+  break;*/
   }
 }
 
@@ -872,8 +876,9 @@ void receiveData() {
     // solo aceptar firmas en la primera vuelta
     if (isRecognizing) {
       //pitiditos(1);
-      firma1Detectada = (Signature==1);
-      firma2Detectada = (Signature==2);
+      firma1Detectada = (Signature==GreenSignature);
+      firma2Detectada = (Signature==RedSignature);
+      digitalWrite(pinLED_rojo, firma2Detectada);
       firma1X = SignatureX;
       firma1Y = SignatureY;
     }
@@ -1521,9 +1526,9 @@ void enableCamera() {
 
 void saveParkingPosition() {
   if (distancia0 > 1500) {
-    parkingY = 1375;
+    parkingY = 1380;
   } else {
-    parkingY = 1935;
+    parkingY = 1380+530;
   }
 }
 
