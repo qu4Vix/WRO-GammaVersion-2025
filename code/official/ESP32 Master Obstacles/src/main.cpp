@@ -31,13 +31,13 @@
 
 // Enables wifi functions when true
 #define ENABLE_WIFI false
-#define ENABLE_TELEMETRY true
+#define ENABLE_TELEMETRY false
 
-#define PARKING_LANE_DISTANCE 325
+#define PARKING_LANE_DISTANCE 370
 
 #define ROTATING_SPEED_LIDAR 200
 
-#define TURNS_TO_UPDATE 1
+#define TURNS_TO_UPDATE 15
 
 /*#if ENABLE_WIFI == true
 #include <OTAUpdate.h>
@@ -54,7 +54,7 @@ TelemetryManager telemetry(receiversIP, receiversPort);
 */
 // Speeds
 #define StartSpeed 2
-#define CruisiereSpeed 6
+#define CruisiereSpeed 10
 #define NormalSpeed 4
 
 /*
@@ -750,7 +750,7 @@ void loop() {
   */
   
   case e::Aparcar1:
-    if (yPosition >= 1380 + 530 - 530*turnClockWise)
+    if (yPosition >= 1360 + 620 - 620*turnClockWise)
     {
       setSpeed(0);
       pidEnabled = false;
@@ -765,7 +765,7 @@ void loop() {
   break;
 
   case e::Aparcar3:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 105) {
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) >= 85) {
       setSpeed(0);
       estadoEsperar(e::Aparcar35, 200);
     }
@@ -778,7 +778,7 @@ void loop() {
   break;
 
   case e::Aparcar4:
-    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 3) {
+    if ((mimpu.GetAngle()*turnSense - 90*totalGiros) <= 5) {
       setSpeed(0);
       estadoEsperar(e::Final, 500);
     } else {
@@ -1574,7 +1574,7 @@ void updatePosition() {
     bool diditfailY = false;
 
     ytemp = readDistance(180);
-    while ((ytemp < 10) || (abs((ytemp - yPosition)) > 200))
+    while ((ytemp < 85) || (abs((ytemp - yPosition)) > 170))
     {
       mimpu.UpdateAngle();
       delay(20);
@@ -1588,7 +1588,7 @@ void updatePosition() {
     } 
     tmax = millis() + 8000;
     xtemp = readDistance(270);
-    while( (xtemp < 10) || (abs((xtemp + lidarToImu - xPosition)) > 200))
+    while( (xtemp < 85) || (abs((xtemp + lidarToImu - xPosition)) > 170))
     {
       mimpu.UpdateAngle();
       delay(20);

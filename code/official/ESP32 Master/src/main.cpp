@@ -73,8 +73,10 @@ uint8_t bateria;
 // List of possible states for the car
 enum e {
   Inicio,
+  Posicionar,
   Recto,
   Final,
+  Esperar,
   Prueba
 };
 uint8_t estado = e::Inicio;
@@ -146,7 +148,24 @@ void setYcoord(uint16_t f);   // set the coordinate y axis
 void decideTurn();            // detect the sense of turn
 void checkTurn();             // check wether you have to turn or not
 
+unsigned long marcaMillis;
+byte marcaEstado;
 
+void estadoEsperar(byte estadoObjetivo, uint16_t delay) {
+  marcaMillis = millis() + delay;
+  marcaEstado = estadoObjetivo;
+  estado = e::Esperar;
+}
+
+void pitiditos(int num){
+  while(num > 0){
+    digitalWrite(pinBuzzer, HIGH);
+    delay(50);
+    digitalWrite(pinBuzzer,LOW);
+    delay(50);
+    num--;
+  }
+}
 
 // ***** SETUP CODE *****
 // This code will only run once, just after turning on the ESP32
@@ -427,22 +446,29 @@ void loop() {
   switch (estado)
   {
   case e::Inicio:   // Start position
-    if (yPosition >= 1500) {
+    if (yPosition >= 2000) {
       decideTurn();
+      if (turnSense != 0) {
+        estado = e::Posicionar;
+      }
       if (yPosition >= 2400) {
         setSpeed(0);
+        pitiditos(2);
+        estadoEsperar(e::Posicionar, 2000);
       }
-      if (turnSense != 0) {
-          //digitalWrite(pinLED_rojo, LOW);
-          digitalWrite(pinLED_amarillo, HIGH);
-          //digitalWrite(pinBuzzer, HIGH);
-          //setXcoord(readDistance(270));
-          objectivePosition = xPosition;
-          vTaskDelete(Task1);
-          analogWrite(pinLIDAR_motor, 0);
-          estado = e::Recto;
-          setSpeed(CruisiereSpeed);
-        }
+    }
+  break;
+  case e::Posicionar:
+    if (turnSense != 0) {
+      digitalWrite(pinLED_amarillo, HIGH);
+      objectivePosition = xPosition;
+      vTaskDelete(Task1);
+      analogWrite(pinLIDAR_motor, 0);
+      estado = e::Recto;
+      setSpeed(CruisiereSpeed);
+    } else {
+      pitiditos(1);
+      decideTurn();
     }
   break;
   case e::Recto:
@@ -453,6 +479,12 @@ void loop() {
   case e::Final:
     if (yPosition >= 1200) {
       setSpeed(0);
+    }
+  break;
+  case e::Esperar:
+    if (millis() >= marcaMillis) {
+      //pitiditos(5);
+      estado = marcaEstado;
     }
   break;
   //Caso prueba para probar el encoder y calcular MMperEncoder

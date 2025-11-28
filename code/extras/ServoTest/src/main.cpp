@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-#define pinServo 12
+#define pinServo 25
 
 #define servo0 85
 #define servoRange 85
@@ -11,7 +11,7 @@
 Servo miservo;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
@@ -25,7 +25,20 @@ void setup() {
 void loop() {
   if (Serial.available())
   {
-    miservo.write(Serial.parseInt());
+    uint8_t data = Serial.parseInt();
+    switch (data)
+    {
+    case 1:
+      miservo.write(0);
+      break;
+    case 2:
+      miservo.write(90);
+      break;
+    case 3:
+      miservo.write(180);
+      break;
+    }
+    
   }
   
 }
